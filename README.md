@@ -2,7 +2,7 @@
 
 ## 📖 项目简介
 
-这是一个基于Spring Boot 3.2.0构建的企业级开发框架，集成了当前主流的技术栈，提供了完整的基础功能模块，开箱即用，帮助开发者快速构建企业级应用。
+这是一个基于Spring Boot 3.2.0构建的企业级开发框架，采用模块化架构设计，集成了当前主流的技术栈，提供了完整的基础功能模块，开箱即用，帮助开发者快速构建企业级应用。
 
 ## ✨ 框架特性
 
@@ -57,42 +57,120 @@
    - 在线调试
    - 接口测试
 
+8. **CAP分布式事务**
+   - 分布式事务支持
+   - 消息队列集成
+   - 事务补偿机制
+
 ## 🗂️ 项目结构
 
 ```
-enterprise-spring-boot-framework/
-├── src/main/java/com/enterprise/framework/
-│   ├── common/               # 公共模块
-│   │   ├── exception/       # 异常处理
-│   │   └── result/          # 响应结果
-│   ├── config/              # 配置类
-│   │   ├── SecurityConfig.java      # 安全配置
-│   │   ├── RedisConfig.java         # Redis配置
-│   │   ├── RabbitMQConfig.java      # RabbitMQ配置
-│   │   ├── MyBatisPlusConfig.java   # MyBatis Plus配置
-│   │   └── Knife4jConfig.java       # API文档配置
-│   ├── controller/          # 控制器
-│   │   ├── AuthController.java      # 认证接口
-│   │   └── GeneratorController.java # 代码生成接口
-│   ├── entity/              # 实体类
-│   │   ├── BaseEntity.java         # 基础实体
-│   │   └── User.java               # 用户实体
-│   ├── generator/           # 代码生成器
-│   │   └── CodeGenerator.java      # 代码生成器
-│   ├── mapper/              # 数据访问层
-│   │   └── UserMapper.java         # 用户Mapper
-│   ├── security/            # 安全模块
-│   │   ├── JwtProperties.java      # JWT配置
-│   │   ├── JwtTokenUtil.java       # JWT工具类
-│   │   └── JwtAuthenticationFilter.java # JWT过滤器
-│   ├── service/             # 服务层
-│   │   └── UserDetailsServiceImpl.java # 用户详情服务
-│   └── FrameworkApplication.java    # 启动类
-├── src/main/resources/
-│   ├── application.yml              # 主配置文件
-│   ├── application-dev.yml          # 开发环境配置
-│   └── application-prod.yml         # 生产环境配置
-└── pom.xml                         # Maven配置
+sringboot-learn/
+├── business-system-example/          # 业务系统示例模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/business/
+│   │       ├── BusinessApplication.java    # 业务系统启动类
+│   │       └── controller/
+│   │           └── UserController.java     # 用户控制器
+│   ├── src/main/resources/
+│   │   ├── application.yml                 # 配置文件
+│   │   └── META-INF/
+│   │       └── app.properties              # 应用属性
+│   └── pom.xml                             # Maven配置
+├── enterprise-framework-cap/              # CAP分布式事务模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/cap/
+│   │       ├── CapConfig.java              # CAP配置
+│   │       ├── CapMessage.java             # CAP消息
+│   │       ├── CapProperties.java          # CAP属性
+│   │       ├── CapPublisher.java           # 消息发布者接口
+│   │       ├── CapSubscriber.java          # 消息订阅者接口
+│   │       ├── impl/
+│   │       │   ├── CapPublisherImpl.java   # 消息发布者实现
+│   │       │   └── CapSubscriberImpl.java  # 消息订阅者实现
+│   │       ├── queue/
+│   │       │   ├── MemoryMessageQueue.java # 内存消息队列
+│   │       │   └── MessageQueue.java       # 消息队列接口
+│   │       └── storage/
+│   │           ├── MemoryMessageStorage.java # 内存消息存储
+│   │           └── MessageStorage.java     # 消息存储接口
+│   └── pom.xml
+├── enterprise-framework-common/           # 公共模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/common/
+│   │       ├── exception/
+│   │       │   ├── BusinessException.java  # 业务异常
+│   │       │   └── GlobalExceptionHandler.java # 全局异常处理
+│   │       └── result/
+│   │           ├── Result.java             # 统一响应结果
+│   │           └── ResultCode.java         # 响应状态码
+│   └── pom.xml
+├── enterprise-framework-generator/        # 代码生成器模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/generator/
+│   │       └── CodeGenerator.java          # 代码生成器
+│   └── pom.xml
+├── enterprise-framework-security/         # 安全模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/security/
+│   │       ├── JwtAuthenticationFilter.java # JWT认证过滤器
+│   │       ├── JwtProperties.java          # JWT配置属性
+│   │       └── JwtTokenUtil.java           # JWT工具类
+│   └── pom.xml
+├── enterprise-framework-starter/          # 框架启动器模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/
+│   │       ├── config/
+│   │       │   ├── Knife4jConfig.java      # Knife4j配置
+│   │       │   ├── MyBatisPlusConfig.java  # MyBatis Plus配置
+│   │       │   ├── RabbitMQConfig.java     # RabbitMQ配置
+│   │       │   ├── RedisConfig.java        # Redis配置
+│   │       │   └── SecurityConfig.java     # 安全配置
+│   │       ├── entity/
+│   │       │   ├── BaseEntity.java         # 基础实体
+│   │       │   └── User.java               # 用户实体
+│   │       ├── mapper/
+│   │       │   └── UserMapper.java         # 用户Mapper
+│   │       └── service/
+│   │           ├── CapExampleService.java  # CAP示例服务
+│   │           └── UserDetailsServiceImpl.java # 用户详情服务
+│   ├── src/main/resources/
+│   │   └── META-INF/
+│   │       └── spring.factories            # Spring自动配置
+│   └── pom.xml
+├── enterprise-framework-web/              # Web模块
+│   ├── src/main/java/
+│   │   └── com/enterprise/framework/
+│   │       ├── controller/
+│   │       │   ├── AuthController.java     # 认证控制器
+│   │       │   ├── CapDemoController.java  # CAP演示控制器
+│   │       │   └── GeneratorController.java # 代码生成控制器
+│   │       └── FrameworkApplication.java   # 框架启动类
+│   ├── src/main/resources/
+│   │   ├── application.yml                 # 主配置文件
+│   │   ├── application-cap.yml             # CAP环境配置
+│   │   ├── application-dev.yml             # 开发环境配置
+│   │   ├── application-prod.yml            # 生产环境配置
+│   │   └── META-INF/
+│   │       └── app.properties              # 应用属性
+│   └── pom.xml
+├── docs/                                   # 文档目录
+│   ├── APOLLO_CONFIG.md                    # Apollo配置说明
+│   ├── CAP_COMPONENT.md                    # CAP组件说明
+│   ├── CONFIGURATION_CHANGES.md            # 配置变更说明
+│   ├── database.sql                        # 数据库脚本
+│   ├── FEATURES.md                         # 功能特性说明
+│   └── MODULE_STRUCTURE.md                 # 模块结构说明
+├── scripts/                                # 脚本目录
+│   ├── docker-build.sh                     # Docker构建脚本
+│   ├── start-business.sh                   # 业务系统启动脚本
+│   ├── start.sh                            # 启动脚本
+│   └── test.sh                             # 测试脚本
+├── logs/                                   # 日志目录
+│   └── enterprise-framework.log            # 框架日志
+├── Dockerfile                              # Docker镜像配置
+├── pom.xml                                 # 父级Maven配置
+└── README.md                               # 项目说明文档
 ```
 
 ## 🛠️ 快速开始
@@ -110,8 +188,8 @@ enterprise-spring-boot-framework/
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/your-org/enterprise-spring-boot-framework.git
-cd enterprise-spring-boot-framework
+git clone https://github.com/your-org/sringboot-learn.git
+cd sringboot-learn
 ```
 
 2. **配置数据库**
@@ -138,7 +216,7 @@ VALUES (1, 'admin', '$2a$10$7JB720yubVSOMV0H5nnZP.IhbU6B3SrEP1KcxqvjTM1YRKDC/T3b
 
 3. **修改配置**
 ```yaml
-# 修改 application-dev.yml 中的数据库连接信息
+# 修改 enterprise-framework-web/src/main/resources/application-dev.yml 中的数据库连接信息
 spring:
   datasource:
     druid:
@@ -148,12 +226,31 @@ spring:
 ```
 
 4. **启动应用**
+
+**启动框架Web模块:**
 ```bash
+cd enterprise-framework-web
 mvn spring-boot:run
 ```
 
+**启动业务系统示例:**
+```bash
+cd business-system-example
+mvn spring-boot:run
+```
+
+**使用脚本启动:**
+```bash
+# 启动框架
+./scripts/start.sh
+
+# 启动业务系统
+./scripts/start-business.sh
+```
+
 5. **访问应用**
-- 应用地址: http://localhost:8080/api
+- 框架应用地址: http://localhost:8080/api
+- 业务系统地址: http://localhost:8081/api
 - API文档: http://localhost:8080/doc.html
 - 数据库监控: http://localhost:8080/druid (admin/admin123)
 
@@ -187,6 +284,35 @@ Content-Type: application/json
 
 {
     "tableNames": ["t_user", "t_role"]
+}
+```
+
+### CAP分布式事务
+
+#### 发布消息
+```bash
+POST /api/cap/publish
+Content-Type: application/json
+
+{
+    "topic": "user.created",
+    "message": {
+        "userId": 1,
+        "username": "testuser"
+    }
+}
+```
+
+#### 订阅消息
+```java
+@Component
+public class UserEventHandler {
+    
+    @CapSubscriber(topic = "user.created")
+    public void handleUserCreated(CapMessage message) {
+        // 处理用户创建事件
+        System.out.println("用户创建事件: " + message.getData());
+    }
 }
 ```
 
@@ -285,6 +411,68 @@ spring:
     virtual-host: /
 ```
 
+## 🔧 模块说明
+
+### 模块依赖关系
+
+```
+enterprise-framework-web (Web模块)
+├── enterprise-framework-starter (启动器模块)
+│   ├── enterprise-framework-common (公共模块)
+│   ├── enterprise-framework-security (安全模块)
+│   └── enterprise-framework-generator (代码生成器模块)
+└── enterprise-framework-cap (CAP分布式事务模块)
+    └── enterprise-framework-common (公共模块)
+```
+
+### 模块功能说明
+
+- **enterprise-framework-common**: 提供统一的响应格式、异常处理等公共功能
+- **enterprise-framework-security**: 提供JWT认证授权功能
+- **enterprise-framework-generator**: 提供代码生成功能
+- **enterprise-framework-starter**: 框架启动器，自动配置各种组件
+- **enterprise-framework-cap**: 提供分布式事务支持
+- **enterprise-framework-web**: Web应用模块，提供REST API
+- **business-system-example**: 业务系统示例，展示如何使用框架
+
+### 使用框架开发业务系统
+
+1. **添加依赖**
+```xml
+<dependency>
+    <groupId>com.enterprise</groupId>
+    <artifactId>enterprise-framework-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+2. **启用自动配置**
+```java
+@SpringBootApplication
+@EnableEnterpriseFramework
+public class BusinessApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(BusinessApplication.class, args);
+    }
+}
+```
+
+3. **使用框架功能**
+```java
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+    
+    @Autowired
+    private UserService userService;
+    
+    @GetMapping("/{id}")
+    public Result<User> getUser(@PathVariable Long id) {
+        return Result.success(userService.getById(id));
+    }
+}
+```
+
 ## 📋 开发规范
 
 ### 代码规范
@@ -321,20 +509,34 @@ spring:
 
 1. **构建镜像**
 ```bash
+# 构建所有模块
 mvn clean package
-docker build -t enterprise-framework:1.0.0 .
+
+# 使用脚本构建Docker镜像
+./scripts/docker-build.sh
 ```
 
 2. **运行容器**
 ```bash
+# 运行框架Web模块
 docker run -d \
-  --name enterprise-framework \
+  --name enterprise-framework-web \
   -p 8080:8080 \
   -e SPRING_PROFILES_ACTIVE=prod \
   -e DB_URL=jdbc:oracle:thin:@oracle:1521:PROD \
   -e DB_USERNAME=framework \
   -e DB_PASSWORD=framework123 \
-  enterprise-framework:1.0.0
+  enterprise-framework-web:1.0.0
+
+# 运行业务系统示例
+docker run -d \
+  --name business-system-example \
+  -p 8081:8081 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_URL=jdbc:oracle:thin:@oracle:1521:PROD \
+  -e DB_USERNAME=framework \
+  -e DB_PASSWORD=framework123 \
+  business-system-example:1.0.0
 ```
 
 ### Kubernetes部署
