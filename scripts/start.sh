@@ -22,6 +22,10 @@ fi
 export SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
 export SERVER_PORT=${SERVER_PORT:-8080}
 
+# 设置Apollo配置
+export APOLLO_APP_ID=${APOLLO_APP_ID:-enterprise-framework}
+export APOLLO_META=${APOLLO_META:-http://localhost:8080}
+
 echo "当前环境: $SPRING_PROFILES_ACTIVE"
 echo "服务端口: $SERVER_PORT"
 
@@ -38,10 +42,13 @@ echo "项目编译成功!"
 
 # 启动应用
 echo "正在启动应用..."
-mvn spring-boot:run -Dspring-boot.run.profiles=$SPRING_PROFILES_ACTIVE
+mvn spring-boot:run \
+  -Dspring-boot.run.profiles=$SPRING_PROFILES_ACTIVE \
+  -Dapollo.app.id=$APOLLO_APP_ID \
+  -Dapollo.meta=$APOLLO_META
 
 echo "应用启动完成!"
 echo "访问地址:"
 echo "  - 应用首页: http://localhost:$SERVER_PORT/api"
 echo "  - API文档: http://localhost:$SERVER_PORT/doc.html"
-echo "  - 数据库监控: http://localhost:$SERVER_PORT/druid"
+echo "  - 健康检查: http://localhost:$SERVER_PORT/actuator/health"
