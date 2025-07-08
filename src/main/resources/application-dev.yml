@@ -1,0 +1,48 @@
+# 开发环境配置
+server:
+  port: 8080
+
+spring:
+  # 数据源配置
+  datasource:
+    druid:
+      url: jdbc:oracle:thin:@localhost:1521:XE
+      username: framework
+      password: framework123
+      
+      # 开发环境开启SQL监控
+      web-stat-filter:
+        enabled: true
+      stat-view-servlet:
+        enabled: true
+        login-username: admin
+        login-password: admin123
+  
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+  
+  # RabbitMQ配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    # 开发环境打印SQL
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 日志配置
+logging:
+  level:
+    com.enterprise.framework: debug
+    org.springframework.security: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

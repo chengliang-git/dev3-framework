@@ -1,0 +1,35 @@
+# Maven构建文件
+target/
+!target/spring-boot-framework-1.0.0.jar
+
+# IDE文件
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# Git文件
+.git/
+.gitignore
+
+# 文档和脚本（不需要包含在镜像中）
+docs/
+scripts/
+README.md
+
+# 配置文件（使用环境变量）
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
