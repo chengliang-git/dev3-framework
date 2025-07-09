@@ -4,7 +4,8 @@ import com.enterprise.framework.cap.CapMessage;
 import com.enterprise.framework.cap.CapPublisher;
 import com.enterprise.framework.cap.CapSubscriber;
 import com.enterprise.framework.common.result.Result;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,10 +16,11 @@ import java.util.Map;
  * CAP 演示控制器
  * 展示如何使用 CAP 组件进行消息发布和订阅
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/cap")
 public class CapDemoController {
+
+    private static final Logger log = LoggerFactory.getLogger(CapDemoController.class);
 
     @Autowired
     private CapPublisher capPublisher;

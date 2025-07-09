@@ -25,6 +25,8 @@ JAVA_OPTS="-Dapollo.app.id=$APOLLO_APP_ID"
 JAVA_OPTS="$JAVA_OPTS -Dapollo.meta=$APOLLO_META"
 JAVA_OPTS="$JAVA_OPTS -Dapollo.bootstrap.enabled=true"
 JAVA_OPTS="$JAVA_OPTS -Dapollo.bootstrap.eagerLoad.enabled=true"
+JAVA_OPTS="$JAVA_OPTS -Dapollo.timeout=5000"
+JAVA_OPTS="$JAVA_OPTS -Dapollo.cache-dir=./config-cache"
 
 echo "启动业务系统示例..."
 echo "Apollo配置: $APOLLO_APP_ID -> $APOLLO_META"

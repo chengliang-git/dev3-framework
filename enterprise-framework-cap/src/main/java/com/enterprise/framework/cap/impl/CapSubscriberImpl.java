@@ -14,6 +14,8 @@ import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 
 /**
@@ -40,29 +42,45 @@ public class CapSubscriberImpl implements CapSubscriber {
     private volatile boolean running = true;
 
     public CapSubscriberImpl() {
-        this.consumerExecutor = Executors.newFixedThreadPool(
-                capProperties.getMessageQueue().getConsumerThreads());
+        // 使用默认值初始化，在@PostConstruct中重新配置
+        this.consumerExecutor = Executors.newFixedThreadPool(4);
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     @PostConstruct
     public void start() {
-        // 启动消息消费调度器
-        scheduler.scheduleWithFixedDelay(
-                this::consumeMessages,
-                0,
-                capProperties.getMessageQueue().getPollInterval(),
-                TimeUnit.MILLISECONDS);
+        // 重新配置线程池大小
+        if (capProperties != null && capProperties.getMessageQueue() != null) {
+            // 关闭旧的线程池
+            consumerExecutor.shutdown();
 
-        // 启动清理过期消息的调度器
-        scheduler.scheduleWithFixedDelay(
-                this::cleanupExpiredMessages,
-                capProperties.getStorage().getCleanupInterval(),
-                capProperties.getStorage().getCleanupInterval(),
-                TimeUnit.SECONDS);
+            // 创建新的线程池
+            ThreadPoolExecutor newExecutor = new ThreadPoolExecutor(
+                    capProperties.getMessageQueue().getConsumerThreads(),
+                    capProperties.getMessageQueue().getConsumerThreads(),
+                    0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<>(),
+                    Executors.defaultThreadFactory());
 
-        log.info("CAP Subscriber started with {} consumer threads",
-                capProperties.getMessageQueue().getConsumerThreads());
+            // 启动消息消费调度器
+            scheduler.scheduleWithFixedDelay(
+                    this::consumeMessages,
+                    0,
+                    capProperties.getMessageQueue().getPollInterval(),
+                    TimeUnit.MILLISECONDS);
+
+            // 启动清理过期消息的调度器
+            scheduler.scheduleWithFixedDelay(
+                    this::cleanupExpiredMessages,
+                    capProperties.getStorage().getCleanupInterval(),
+                    capProperties.getStorage().getCleanupInterval(),
+                    TimeUnit.SECONDS);
+
+            log.info("CAP Subscriber started with {} consumer threads",
+                    capProperties.getMessageQueue().getConsumerThreads());
+        } else {
+            log.warn("CAP Properties not available, using default configuration");
+        }
     }
 
     @PreDestroy

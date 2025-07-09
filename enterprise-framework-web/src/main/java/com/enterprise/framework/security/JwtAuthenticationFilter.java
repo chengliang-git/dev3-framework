@@ -18,12 +18,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * JWT认证过滤器
- *
- * @author Enterprise Framework
- * @since 1.0.0
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -68,12 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * 从请求中获取Token
-     *
-     * @param request 请求对象
-     * @return Token
-     */
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader(jwtProperties.getHeader());
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(jwtProperties.getPrefix())) {

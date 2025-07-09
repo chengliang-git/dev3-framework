@@ -71,6 +71,10 @@ apollo:
     eagerLoad:
       enabled: true
     namespaces: application,database,redis,rabbitmq
+  # 超时配置
+  timeout: 5000  # 5秒超时
+  # 连接失败时继续使用本地配置
+  cache-dir: ${APOLLO_CACHE_DIR:./config-cache}
 
 # 日志配置
 logging:

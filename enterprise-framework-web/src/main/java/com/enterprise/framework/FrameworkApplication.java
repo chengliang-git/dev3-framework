@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * @author Enterprise Framework
  * @since 1.0.0
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.enterprise.framework")
 @EnableCaching
 @EnableAsync
 public class FrameworkApplication {

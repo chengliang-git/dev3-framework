@@ -48,6 +48,10 @@ apollo:
     eagerLoad:
       enabled: true
     namespaces: application,database,redis,rabbitmq
+  # 超时配置
+  timeout: 5000  # 5秒超时
+  # 连接失败时继续使用本地配置
+  cache-dir: ${APOLLO_CACHE_DIR:./config-cache}
 ```
 
 #### 开发环境 (application-dev.yml)
@@ -79,7 +83,11 @@ export APOLLO_META=${APOLLO_META:-http://localhost:8080}
 mvn spring-boot:run \
   -Dspring-boot.run.profiles=$SPRING_PROFILES_ACTIVE \
   -Dapollo.app.id=$APOLLO_APP_ID \
-  -Dapollo.meta=$APOLLO_META
+  -Dapollo.meta=$APOLLO_META \
+  -Dapollo.timeout=5000 \
+  -Dapollo.bootstrap.enabled=true \
+  -Dapollo.bootstrap.eagerLoad.enabled=true \
+  -Dapollo.cache-dir=./config-cache
 ```
 
 ## 配置参数说明
@@ -91,6 +99,8 @@ mvn spring-boot:run \
 | `bootstrap.enabled` | 是否启用Apollo | true | - |
 | `bootstrap.eagerLoad.enabled` | 是否启用预加载 | true | - |
 | `bootstrap.namespaces` | 配置命名空间 | application,database,redis,rabbitmq | - |
+| `timeout` | 连接超时时间（毫秒） | 5000 | APOLLO_TIMEOUT |
+| `cache-dir` | 本地缓存目录 | ./config-cache | APOLLO_CACHE_DIR |
 
 ## 命名空间说明
 
@@ -129,6 +139,12 @@ app.id is not available from System Property and /META-INF/app.properties. It is
 1. Meta Server 地址是否正确
 2. 网络连接是否正常
 3. Apollo 服务是否启动
+
+**超时配置说明：**
+- 默认超时时间为5秒（5000毫秒）
+- 如果连接超时，Apollo会自动使用本地缓存配置
+- 可以通过系统属性 `-Dapollo.timeout=5000` 调整超时时间
+- 本地缓存目录默认为 `./config-cache`
 
 ### 3. 配置不生效
 如果配置不生效，检查：

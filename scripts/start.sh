@@ -45,7 +45,11 @@ echo "正在启动应用..."
 mvn spring-boot:run \
   -Dspring-boot.run.profiles=$SPRING_PROFILES_ACTIVE \
   -Dapollo.app.id=$APOLLO_APP_ID \
-  -Dapollo.meta=$APOLLO_META
+  -Dapollo.meta=$APOLLO_META \
+  -Dapollo.timeout=5000 \
+  -Dapollo.bootstrap.enabled=true \
+  -Dapollo.bootstrap.eagerLoad.enabled=true \
+  -Dapollo.cache-dir=./config-cache
 
 echo "应用启动完成!"
 echo "访问地址:"

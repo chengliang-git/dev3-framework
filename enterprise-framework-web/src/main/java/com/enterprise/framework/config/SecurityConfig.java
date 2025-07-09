@@ -54,22 +54,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // 禁用CSRF
-            .csrf(AbstractHttpConfigurer::disable)
-            // 配置CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // 配置会话管理
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // 配置请求授权
-            .authorizeHttpRequests(auth -> {
-                // 放行的路径
-                String[] permitAllPaths = securityProperties.getPermitAllPaths().toArray(new String[0]);
-                auth.requestMatchers(permitAllPaths).permitAll();
-                // 其他请求需要认证
-                auth.anyRequest().authenticated();
-            })
-            // 添加JWT过滤器
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // 禁用CSRF
+                .csrf(AbstractHttpConfigurer::disable)
+                // 配置CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // 配置会话管理
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 配置请求授权
+                .authorizeHttpRequests(auth -> {
+                    // 放行的路径
+                    String[] permitAllPaths = securityProperties.getPermitAllPaths().toArray(new String[0]);
+                    auth.requestMatchers(permitAllPaths).permitAll();
+                    // 其他请求需要认证
+                    auth.anyRequest().authenticated();
+                })
+                // 添加JWT过滤器
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -95,16 +95,15 @@ public class SecurityConfig {
     @ConfigurationProperties(prefix = "framework.security")
     public static class SecurityProperties {
         private List<String> permitAllPaths = Arrays.asList(
-                "/api/auth/login",
-                "/api/auth/register",
+                "/auth/login",
+                "/auth/register",
                 "/druid/**",
                 "/doc.html",
                 "/webjars/**",
                 "/swagger-resources/**",
                 "/v3/api-docs/**",
-                "/actuator/**"
-        );
-        
+                "/actuator/**");
+
         private CorsProperties cors = new CorsProperties();
 
         public List<String> getPermitAllPaths() {
