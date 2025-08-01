@@ -1,0 +1,25 @@
+spring:
+  # MongoDB配置（生产环境）
+  data:
+    mongodb:
+      host: ${MONGODB_HOST:localhost}
+      port: ${MONGODB_PORT:27017}
+      database: ${MONGODB_DATABASE:tles_case_db}
+      username: ${MONGODB_USERNAME:admin}
+      password: ${MONGODB_PASSWORD:admin123}
+      authentication-database: admin
+  
+  # Oracle数据源配置（生产环境）
+  datasource:
+    oracle:
+      url: ${ORACLE_URL:jdbc:oracle:thin:@localhost:1521:ORCL}
+      username: ${ORACLE_USERNAME:tles_user}
+      password: ${ORACLE_PASSWORD:tles_pass}
+
+# 日志配置（生产环境）
+logging:
+  level:
+    com.guanwei.tles.casetransfer: INFO
+    com.guanwei.framework: WARN
+    org.springframework.web: WARN
+    org.mybatis: WARN 

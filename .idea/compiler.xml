@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="guanwei-framework-web" />
+        <module name="guanwei-framework-security" />
+        <module name="guanwei-framework-starter" />
+        <module name="guanwei-framework-cap" />
+        <module name="business-system-example" />
+        <module name="guanwei-framework-generator" />
+        <module name="guanwei-tles-case-transfer" />
+        <module name="guanwei-framework-common" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="enterprise-framework-cap" target="17" />
+      <module name="enterprise-framework-common" target="17" />
+      <module name="enterprise-framework-generator" target="17" />
+      <module name="enterprise-framework-security" target="17" />
+      <module name="enterprise-framework-starter" target="17" />
+      <module name="enterprise-framework-web" target="17" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="business-system-example" options="-parameters" />
+      <module name="guanwei-framework-cap" options="-parameters" />
+      <module name="guanwei-framework-common" options="-parameters" />
+      <module name="guanwei-framework-generator" options="-parameters" />
+      <module name="guanwei-framework-security" options="-parameters" />
+      <module name="guanwei-framework-starter" options="-parameters" />
+      <module name="guanwei-framework-web" options="-parameters" />
+      <module name="guanwei-tles-case-transfer" options="-parameters" />
+    </option>
+  </component>
+</project>

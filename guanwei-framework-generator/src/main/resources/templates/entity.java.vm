@@ -1,0 +1,59 @@
+package ${package.Entity};
+
+#foreach($pkg in ${table.importPackages})
+import ${pkg};
+#end
+#foreach($pkg in ${table.importPackages})
+import ${pkg};
+#end
+import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * ${table.comment!}
+ *
+ * @author ${author}
+ * @since ${date}
+ */
+@Data
+@EqualsAndHashCode(callSuper = false)
+@TableName("${table.name}")
+@Schema(description = "${table.comment!}")
+public class ${entity} extends BaseEntity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+#foreach($field in ${table.fields})
+#if(${field.keyFlag})
+    @Schema(description = "${field.comment}")
+    @TableId(value = "${field.annotationColumnName}", type = IdType.ASSIGN_UUID)
+    private ${field.propertyType} ${field.propertyName};
+#elseif(${field.name} == "createTime")
+    // 创建时间字段已在BaseEntity中定义
+#elseif(${field.name} == "modifyTime")
+    // 修改时间字段已在BaseEntity中定义
+#elseif(${field.name} == "creator")
+    // 创建人字段已在BaseEntity中定义
+#elseif(${field.name} == "modifier")
+    // 修改人字段已在BaseEntity中定义
+#elseif(${field.name} == "delFlag")
+    // 删除标记字段已在BaseEntity中定义
+#elseif(${field.name} == "orderNo")
+    // 顺序号字段已在BaseEntity中定义
+#else
+    @Schema(description = "${field.comment}")
+    @TableField("${field.annotationColumnName}")
+#if(${field.propertyType} == "LocalDateTime")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+#end
+    private ${field.propertyType} ${field.propertyName};
+#end
+#end
+
+} 

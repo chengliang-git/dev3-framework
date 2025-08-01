@@ -1,7 +1,7 @@
 package com.enterprise.business.controller;
 
-import com.enterprise.framework.cap.CapPublisher;
-import com.enterprise.framework.common.result.Result;
+import com.guanwei.framework.cap.CapPublisher;
+import com.guanwei.framework.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

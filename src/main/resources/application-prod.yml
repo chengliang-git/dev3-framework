@@ -50,7 +50,7 @@ mybatis-plus:
 
 # Apollo配置中心
 apollo:
-  app-id: ${APOLLO_APP_ID:enterprise-framework}
+  app-id: ${APOLLO_APP_ID:guanwei-framework}
   meta: ${APOLLO_META:http://prod-apollo:8080}
   # 超时配置
   timeout: 5000  # 5秒超时
@@ -61,11 +61,11 @@ apollo:
 logging:
   level:
     root: warn
-    com.enterprise.framework: info
+    com.guanwei.framework: info
     com.ctrip.framework.apollo: warn
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
   file:
-    name: logs/enterprise-framework.log
+    name: logs/guanwei-framework.log
     max-size: 100MB
     max-history: 30

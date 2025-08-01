@@ -1,0 +1,10 @@
+# Auto Configure
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.guanwei.framework.config.Knife4jConfig,\
+com.guanwei.framework.config.MyBatisPlusConfig,\
+com.guanwei.framework.config.OracleConfig,\
+com.guanwei.framework.config.MongoConfig,\
+com.guanwei.framework.config.RabbitMQConfig,\
+com.guanwei.framework.config.RedisConfig,\
+config.com.guanwei.framework.SecurityConfig,\
+com.guanwei.framework.cap.CapConfig 

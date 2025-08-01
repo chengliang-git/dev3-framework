@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!-- 本地仓库路径 -->
+    <localRepository>${user.home}/.m2/repository</localRepository>
+
+    <!-- 镜像配置 -->
+    <mirrors>
+        <!-- 阿里云镜像 -->
+        <mirror>
+            <id>aliyun</id>
+            <name>Aliyun Maven Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <mirrorOf>central</mirrorOf>
+        </mirror>
+    </mirrors>
+
+    <!-- 服务器配置 -->
+    <servers>
+        <!-- 本地Nexus仓库配置 -->
+        <server>
+            <id>guanwei-releases</id>
+            <username>admin</username>
+            <password>admin123</password>
+        </server>
+        <server>
+            <id>guanwei-snapshots</id>
+            <username>admin</username>
+            <password>admin123</password>
+        </server>
+    </servers>
+
+    <!-- 配置文件 -->
+    <profiles>
+        <!-- 默认配置 -->
+        <profile>
+            <id>default</id>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <name>Central Repository</name>
+                    <url>https://repo1.maven.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <name>Central Repository</name>
+                    <url>https://repo1.maven.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <!-- 企业仓库配置 -->
+        <profile>
+            <id>guanwei</id>
+            <repositories>
+                <repository>
+                    <id>guanwei-releases</id>
+                    <name>Guanwei Releases</name>
+                    <url>http://localhost:8081/repository/guanwei-releases/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>guanwei-snapshots</id>
+                    <name>Guanwei Snapshots</name>
+                    <url>http://localhost:8081/repository/guanwei-snapshots/</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>guanwei-releases</id>
+                    <name>Guanwei Releases</name>
+                    <url>http://localhost:8081/repository/guanwei-releases/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>guanwei-snapshots</id>
+                    <name>Guanwei Snapshots</name>
+                    <url>http://localhost:8081/repository/guanwei-snapshots/</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <!-- 激活配置 -->
+    <activeProfiles>
+        <activeProfile>default</activeProfile>
+        <activeProfile>guanwei</activeProfile>
+    </activeProfiles>
+
+</settings> 

@@ -1,0 +1,177 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: your-project-name
+  
+  profiles:
+    active: dev
+  
+  # 数据源配置
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521:XE
+    username: ${ORACLE_USERNAME:your_username}
+    password: ${ORACLE_PASSWORD:your_password}
+    driver-class-name: oracle.jdbc.OracleDriver
+    
+    # HikariCP连接池配置
+    hikari:
+      pool-name: HikariCP
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1 FROM DUAL
+  
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  
+  # MongoDB配置（可选）
+  data:
+    mongodb:
+      host: ${MONGODB_HOST:localhost}
+      port: ${MONGODB_PORT:27017}
+      database: ${MONGODB_DATABASE:your_project_db}
+      username: ${MONGODB_USERNAME:}
+      password: ${MONGODB_PASSWORD:}
+  
+  # RabbitMQ配置（可选）
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    connection-timeout: 15000
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 3000
+  
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: NON_NULL
+
+# MyBatis Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.guanwei.yourproject.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_UUID
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:your-jwt-secret-key-2024}
+  expiration: 86400000  # 24小时
+  header: Authorization
+  prefix: Bearer
+
+# Apollo配置中心（可选）
+apollo:
+  app-id: ${APOLLO_APP_ID:your-project-name}
+  meta: ${APOLLO_META:http://localhost:8080}
+  bootstrap:
+    enabled: true
+    eagerLoad:
+      enabled: true
+    namespaces: application,database,redis,rabbitmq
+  timeout: 5000
+  cache-dir: ${APOLLO_CACHE_DIR:./config-cache}
+
+# Knife4j API文档配置
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: true
+    enable-reload-cache-parameter: true
+    enable-after-script: true
+    enable-filter-multipart-api-method-type: POST
+    enable-filter-multipart-apis: false
+    enable-request-cache: true
+    enable-host: false
+    enable-host-text: http://localhost:8080
+    enable-home-custom: true
+    home-custom-location: classpath:markdown/home.md
+  documents:
+    - group: 项目API
+      name: 项目接口文档
+      locations: classpath:markdown/*
+
+# 日志配置
+logging:
+  level:
+    com.guanwei.yourproject: debug
+    org.springframework.security: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: logs/your-project.log
+    max-size: 10MB
+    max-history: 30
+
+# 框架自定义配置
+framework:
+  # 安全配置
+  security:
+    permit-all-paths:
+      - /api/auth/login
+      - /api/auth/register
+      - /doc.html
+      - /webjars/**
+      - /swagger-resources/**
+      - /v3/api-docs/**
+      - /actuator/**
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+  
+  # 代码生成器配置
+  generator:
+    author: Your Name
+    package-name: com.guanwei.yourproject
+    table-prefix: t_
+    exclude-columns: id,createTime,modifyTime,creator,modifier,delFlag,orderNo
+  
+  # 文件上传配置
+  upload:
+    path: ${UPLOAD_PATH:./uploads}
+    max-file-size: 10MB
+    max-request-size: 100MB
+    allowed-extensions: jpg,jpeg,png,gif,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar 

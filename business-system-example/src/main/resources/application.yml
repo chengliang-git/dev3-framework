@@ -80,6 +80,6 @@ apollo:
 logging:
   level:
     com.enterprise.business: debug
-    com.enterprise.framework: info
+    com.guanwei.framework: info
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n" 

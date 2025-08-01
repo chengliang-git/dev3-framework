@@ -1,0 +1,29 @@
+spring:
+  # MongoDB配置（开发环境）
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: tles_case_db_dev
+      username: admin
+      password: admin123
+      authentication-database: admin
+
+  # Oracle数据源配置（开发环境）
+  datasource:
+    oracle:
+      url: jdbc:oracle:thin:@10.21.3.249:1521:GNSS
+      username: gnssuser
+      password: gnsspass
+
+  # Spring配置（开发环境）
+  main:
+    allow-bean-definition-overriding: true
+
+# 日志配置（开发环境）
+logging:
+  level:
+    com.guanwei.tles.casetransfer: DEBUG
+    com.guanwei.framework: DEBUG
+    org.springframework.web: DEBUG
+    org.mybatis: DEBUG

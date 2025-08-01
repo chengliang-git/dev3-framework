@@ -50,7 +50,7 @@ mybatis-plus:
 
 # Apollo配置中心
 apollo:
-  app-id: ${APOLLO_APP_ID:enterprise-framework}
+  app-id: ${APOLLO_APP_ID:guanwei-framework}
   meta: ${APOLLO_META:http://localhost:8080}
   # 超时配置
   timeout: 5000  # 5秒超时
@@ -60,7 +60,7 @@ apollo:
 # 日志配置
 logging:
   level:
-    com.enterprise.framework: debug
+    com.guanwei.framework: debug
     org.springframework.security: debug
     com.ctrip.framework.apollo: warn
   pattern:

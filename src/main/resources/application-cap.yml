@@ -54,7 +54,7 @@ cap:
 # 日志配置
 logging:
   level:
-    com.enterprise.framework.cap: DEBUG
-    com.enterprise.framework.cap.impl: DEBUG
-    com.enterprise.framework.cap.storage: DEBUG
-    com.enterprise.framework.cap.queue: DEBUG 
+    com.guanwei.framework.cap: DEBUG
+    com.guanwei.framework.cap.impl: DEBUG
+    com.guanwei.framework.cap.storage: DEBUG
+    com.guanwei.framework.cap.queue: DEBUG

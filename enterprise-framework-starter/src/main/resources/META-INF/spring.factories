@@ -1,8 +1,0 @@
-# Auto Configure
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.enterprise.framework.config.Knife4jConfig,\
-com.enterprise.framework.config.MyBatisPlusConfig,\
-com.enterprise.framework.config.RabbitMQConfig,\
-com.enterprise.framework.config.RedisConfig,\
-com.enterprise.framework.config.SecurityConfig,\
-com.enterprise.framework.cap.CapConfig 

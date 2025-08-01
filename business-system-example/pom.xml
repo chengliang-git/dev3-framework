@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.enterprise</groupId>
-        <artifactId>enterprise-framework-parent</artifactId>
+        <groupId>com.guanwei</groupId>
+        <artifactId>guanwei-framework-parent</artifactId>
         <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -18,8 +18,8 @@
     <dependencies>
         <!-- 企业级框架 Starter -->
         <dependency>
-            <groupId>com.enterprise</groupId>
-            <artifactId>enterprise-framework-starter</artifactId>
+            <groupId>com.guanwei</groupId>
+            <artifactId>guanwei-framework-starter</artifactId>
         </dependency>
 
         <!-- Spring Boot Web -->

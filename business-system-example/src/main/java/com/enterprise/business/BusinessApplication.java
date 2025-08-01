@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 业务系统示例启动类
  * 展示如何使用企业级框架
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = { "com.enterprise.business", "com.guanwei.framework" })
 public class BusinessApplication {
 
     public static void main(String[] args) {

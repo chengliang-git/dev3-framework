@@ -5,7 +5,7 @@
             "name": "Spring Boot-FrameworkApplication<enterprise-framework-web>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "mainClass": "com.enterprise.framework.FrameworkApplication",
+            "mainClass": "com.guanwei.framework.FrameworkApplication",
             "projectName": "enterprise-framework-web",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
