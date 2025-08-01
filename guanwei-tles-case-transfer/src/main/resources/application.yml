@@ -6,6 +6,8 @@ server:
 spring:
   application:
     name: guanwei-tles-case-transfer
+  profiles:
+    active: dev
 
   # MongoDB配置
   data:
@@ -19,17 +21,16 @@ spring:
 
   # Oracle数据源配置
   datasource:
-    oracle:
-      driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@localhost:1521:ORCL
-      username: tles_user
-      password: tles_pass
-      hikari:
-        maximum-pool-size: 20
-        minimum-idle: 5
-        connection-timeout: 30000
-        idle-timeout: 600000
-        max-lifetime: 1800000
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: jdbc:oracle:thin:@localhost:1521:ORCL
+    username: tles_user
+    password: tles_pass
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
 # MyBatis Plus配置
 mybatis-plus:

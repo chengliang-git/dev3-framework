@@ -29,7 +29,7 @@ public class CaseMessageHandler {
     /**
      * 案件新增消息主题
      */
-    private static final String CASE_CREATED_TOPIC = "case.created";
+    private static final String CASE_FILING_TOPIC = "tles.case.filing";
 
     /**
      * 案件修改消息主题
@@ -49,7 +49,7 @@ public class CaseMessageHandler {
     @PostConstruct
     public void init() {
         // 订阅案件新增消息
-        capSubscriber.subscribe(CASE_CREATED_TOPIC, MESSAGE_GROUP, this::handleCaseCreated);
+        capSubscriber.subscribe(CASE_FILING_TOPIC, MESSAGE_GROUP, this::handleCaseCreated);
         
         // 订阅案件修改消息
         capSubscriber.subscribe(CASE_UPDATED_TOPIC, MESSAGE_GROUP, this::handleCaseUpdated);

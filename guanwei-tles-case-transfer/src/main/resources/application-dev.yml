@@ -2,23 +2,34 @@ spring:
   # MongoDB配置（开发环境）
   data:
     mongodb:
-      host: localhost
+      host: 10.56.1.60
       port: 27017
-      database: tles_case_db_dev
-      username: admin
-      password: admin123
-      authentication-database: admin
+      database: dlzf
+      username: caseuser
+      password: Guanwei#123
+      authentication-database: dlzf
+    redis:
+      host: 10.21.3.249
+      port: 16379
+      password: Guanwei@123
+      database: 0
 
   # Oracle数据源配置（开发环境）
   datasource:
-    oracle:
-      url: jdbc:oracle:thin:@10.21.3.249:1521:GNSS
-      username: gnssuser
-      password: gnsspass
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: jdbc:oracle:thin:@//10.21.3.249:1521/GNSS
+    username: gnssuser
+    password: gnsspass
 
   # Spring配置（开发环境）
   main:
     allow-bean-definition-overriding: true
+  # RabbitMQ配置
+  rabbitmq:
+    host: 10.21.3.249
+    port: 5672
+    username: gwuser
+    password: Zhongjj#12_45
 
 # 日志配置（开发环境）
 logging:
