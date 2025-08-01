@@ -3,6 +3,7 @@ package com.guanwei.tles.casetransfer.service.impl;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.common.exception.BusinessException;
 import com.guanwei.framework.common.result.ResultCode;
+import com.guanwei.framework.common.service.impl.BaseMongoServiceImpl;
 import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import com.guanwei.tles.casetransfer.entity.Case;
 import com.guanwei.tles.casetransfer.entity.CaseDocument;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CaseTransferServiceImpl implements CaseTransferService {
+public class CaseTransferServiceImpl extends BaseMongoServiceImpl<CaseRepository, Case> implements CaseTransferService {
 
     private final CaseRepository caseRepository;
 

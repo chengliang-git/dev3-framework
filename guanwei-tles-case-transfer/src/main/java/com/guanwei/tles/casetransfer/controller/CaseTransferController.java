@@ -1,7 +1,8 @@
 package com.guanwei.tles.casetransfer.controller;
 
-
+import com.guanwei.framework.common.controller.BaseMongoController;
 import com.guanwei.framework.common.result.Result;
+import com.guanwei.tles.casetransfer.entity.Case;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,15 +22,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/case-transfer")
 @RequiredArgsConstructor
 @Tag(name = "案件转存管理", description = "案件数据转存相关接口")
-public class CaseTransferController {
+public class CaseTransferController extends BaseMongoController<CaseTransferService, Case> {
 
     private final CaseTransferService caseTransferService;
+
+    @Override
+    protected CaseTransferService getService() {
+        return caseTransferService;
+    }
 
     @PostMapping("/sync/{caseId}")
     @Operation(summary = "手动同步案件数据", description = "手动同步指定案件数据到MongoDB")
     public Result<Void> syncCase(
-            @Parameter(description = "案件ID", required = true)
-            @PathVariable String caseId) {
+            @Parameter(description = "案件ID", required = true) @PathVariable String caseId) {
         log.info("手动同步案件数据: {}", caseId);
         caseTransferService.syncCaseToMongoDB(caseId);
         return Result.success();
@@ -40,4 +45,4 @@ public class CaseTransferController {
     public Result<String> health() {
         return Result.success("案件转存服务运行正常");
     }
-} 
+}
