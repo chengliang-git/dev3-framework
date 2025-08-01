@@ -1,11 +1,16 @@
 package com.guanwei.framework.cap.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapSubscriber;
 import com.guanwei.framework.cap.queue.MessageQueue;
+import com.guanwei.framework.cap.queue.RabbitMQMessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +26,7 @@ import java.util.function.Consumer;
 /**
  * CAP 订阅者实现类
  * 负责消息的订阅、消费和处理
+ * 参考 .NET Core CAP 的消息处理机制
  */
 @Slf4j
 @Component
@@ -35,6 +41,10 @@ public class CapSubscriberImpl implements CapSubscriber {
     @Autowired
     private CapProperties capProperties;
 
+    @Autowired(required = false)
+    private RabbitMQMessageQueue rabbitMQMessageQueue;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Consumer<CapMessage>> handlers = new ConcurrentHashMap<>();
     private final Map<String, CapSubscriber.MessageHandler<?>> typedHandlers = new ConcurrentHashMap<>();
     private final ExecutorService consumerExecutor;
@@ -307,8 +317,9 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     /**
      * 构建队列名称
+     * 参考 .NET Core CAP 的命名规则：group 作为队列名
      */
     private String buildQueueName(String name, String group) {
-        return capProperties.getMessageQueue().getQueuePrefix() + name + "_" + group;
+        return group;
     }
 }

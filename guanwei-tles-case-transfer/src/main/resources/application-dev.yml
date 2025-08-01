@@ -30,6 +30,15 @@ spring:
     port: 5672
     username: gwuser
     password: Zhongjj#12_45
+    virtual-host: /test
+    connection-timeout: 15000
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 3000
 
 # 日志配置（开发环境）
 logging:

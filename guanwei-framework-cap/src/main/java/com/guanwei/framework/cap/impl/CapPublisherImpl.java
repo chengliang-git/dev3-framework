@@ -117,8 +117,9 @@ public class CapPublisherImpl implements CapPublisher {
 
     /**
      * 构建队列名称
+     * 参考 .NET Core CAP 的命名规则：group 作为队列名
      */
     private String buildQueueName(String name, String group) {
-        return capProperties.getMessageQueue().getQueuePrefix() + name + "_" + group;
+        return group;
     }
 } 

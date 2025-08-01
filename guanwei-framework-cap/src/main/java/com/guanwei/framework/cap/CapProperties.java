@@ -73,6 +73,11 @@ public class CapProperties {
         private String type = "memory";
 
         /**
+         * 交换机名称（RabbitMQ专用）
+         */
+        private String exchangeName = "cap.exchange";
+
+        /**
          * 队列名称前缀
          */
         private String queuePrefix = "cap_";

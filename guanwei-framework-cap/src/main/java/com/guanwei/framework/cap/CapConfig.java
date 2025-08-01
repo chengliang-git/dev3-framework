@@ -2,6 +2,7 @@ package com.guanwei.framework.cap;
 
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.queue.MemoryMessageQueue;
+import com.guanwei.framework.cap.queue.RabbitMQMessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import com.guanwei.framework.cap.storage.MemoryMessageStorage;
 import com.guanwei.framework.cap.impl.CapSubscriberImpl;
@@ -28,8 +29,13 @@ public class CapConfig {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MessageQueue messageQueue() {
-        return new MemoryMessageQueue();
+    public MessageQueue messageQueue(CapProperties capProperties) {
+        String queueType = capProperties.getMessageQueue().getType();
+        if ("rabbitmq".equalsIgnoreCase(queueType)) {
+            return new RabbitMQMessageQueue();
+        } else {
+            return new MemoryMessageQueue();
+        }
     }
 
     /**

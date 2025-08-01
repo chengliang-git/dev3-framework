@@ -46,10 +46,25 @@ mybatis-plus:
 # CAP消息配置
 cap:
   enabled: true
+  default-group: "case-transfer-group"
+  
+  storage:
+    type: "memory"
+    message-expired: 86400  # 24小时
+    cleanup-interval: 3600  # 1小时
+  
   message-queue:
-    type: memory
-  message-storage:
-    type: memory
+    type: "rabbitmq"
+    exchange-name: "cap.exchange"
+    queue-prefix: "cap_"
+    consumer-threads: 10
+    batch-size: 100
+    poll-interval: 1000
+  
+  retry:
+    max-retries: 3
+    retry-interval: 60
+    strategy: "fixed"
 
 # 日志配置
 logging:

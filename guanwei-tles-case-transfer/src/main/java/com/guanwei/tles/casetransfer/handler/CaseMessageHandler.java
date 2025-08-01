@@ -1,18 +1,21 @@
 package com.guanwei.tles.casetransfer.handler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapSubscriber;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 
 /**
  * 案件消息处理器
+ * 支持内存队列和RabbitMQ两种模式
  * 
  * @author Guanwei Framework
  * @since 1.0.0
@@ -64,13 +67,19 @@ public class CaseMessageHandler {
      * 处理案件新增消息
      */
     public void handleCaseCreated(CapMessage capMessage) {
-        log.info("收到案件新增消息: {}", capMessage);
         try {
-            CaseMessage caseMessage = parseCaseMessage(capMessage);
+            log.info("收到案件新增消息: {}", capMessage.getId());
+            
+            // 解析消息内容
+            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            
+            // 调用转存服务
             caseTransferService.handleCaseCreated(caseMessage);
+            
+            log.info("案件新增消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件新增消息失败: {}", capMessage, e);
-            throw e;
+            log.error("处理案件新增消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件新增消息失败", e);
         }
     }
 
@@ -78,13 +87,19 @@ public class CaseMessageHandler {
      * 处理案件修改消息
      */
     public void handleCaseUpdated(CapMessage capMessage) {
-        log.info("收到案件修改消息: {}", capMessage);
         try {
-            CaseMessage caseMessage = parseCaseMessage(capMessage);
+            log.info("收到案件修改消息: {}", capMessage.getId());
+            
+            // 解析消息内容
+            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            
+            // 调用转存服务
             caseTransferService.handleCaseUpdated(caseMessage);
+            
+            log.info("案件修改消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件修改消息失败: {}", capMessage, e);
-            throw e;
+            log.error("处理案件修改消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件修改消息失败", e);
         }
     }
 
@@ -92,25 +107,70 @@ public class CaseMessageHandler {
      * 处理案件删除消息
      */
     public void handleCaseDeleted(CapMessage capMessage) {
-        log.info("收到案件删除消息: {}", capMessage);
         try {
-            CaseMessage caseMessage = parseCaseMessage(capMessage);
+            log.info("收到案件删除消息: {}", capMessage.getId());
+            
+            // 解析消息内容
+            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            
+            // 调用转存服务
             caseTransferService.handleCaseDeleted(caseMessage);
+            
+            log.info("案件删除消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件删除消息失败: {}", capMessage, e);
-            throw e;
+            log.error("处理案件删除消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件删除消息失败", e);
         }
     }
 
     /**
-     * 解析案件消息
+     * RabbitMQ监听器 - 案件新增
      */
-    private CaseMessage parseCaseMessage(CapMessage capMessage) {
+    @RabbitListener(queues = "case-transfer-group")
+    public void handleCaseCreatedRabbitMQ(Message message) {
         try {
-            return objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            String messageBody = new String(message.getBody());
+            CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
+            
+            if (CASE_FILING_TOPIC.equals(capMessage.getName())) {
+                handleCaseCreated(capMessage);
+            }
         } catch (Exception e) {
-            log.error("解析案件消息失败: {}", capMessage.getContent(), e);
-            throw new RuntimeException("解析案件消息失败", e);
+            log.error("RabbitMQ处理案件新增消息失败", e);
+        }
+    }
+
+    /**
+     * RabbitMQ监听器 - 案件修改
+     */
+    @RabbitListener(queues = "case-transfer-group")
+    public void handleCaseUpdatedRabbitMQ(Message message) {
+        try {
+            String messageBody = new String(message.getBody());
+            CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
+            
+            if (CASE_UPDATED_TOPIC.equals(capMessage.getName())) {
+                handleCaseUpdated(capMessage);
+            }
+        } catch (Exception e) {
+            log.error("RabbitMQ处理案件修改消息失败", e);
+        }
+    }
+
+    /**
+     * RabbitMQ监听器 - 案件删除
+     */
+    @RabbitListener(queues = "case-transfer-group")
+    public void handleCaseDeletedRabbitMQ(Message message) {
+        try {
+            String messageBody = new String(message.getBody());
+            CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
+            
+            if (CASE_DELETED_TOPIC.equals(capMessage.getName())) {
+                handleCaseDeleted(capMessage);
+            }
+        } catch (Exception e) {
+            log.error("RabbitMQ处理案件删除消息失败", e);
         }
     }
 } 
