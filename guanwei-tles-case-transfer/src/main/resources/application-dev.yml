@@ -24,21 +24,42 @@ spring:
   # Spring配置（开发环境）
   main:
     allow-bean-definition-overriding: true
-  # RabbitMQ配置
+
+  # RabbitMQ配置（开发环境）
   rabbitmq:
     host: 10.21.3.249
     port: 5672
     username: gwuser
     password: Zhongjj#12_45
-    virtual-host: /test
-    connection-timeout: 15000
+    virtual-host: test
+    connection-timeout: 30000
+    requested-heartbeat: 60
+    channel-rpc-timeout: 10000
+    channel-checkout-timeout: 0
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+      receive-timeout: 5000
+      reply-timeout: 5000
     listener:
       simple:
         acknowledge-mode: manual
+        prefetch: 1
+        concurrency: 1
+        max-concurrency: 10
         retry:
           enabled: true
           max-attempts: 3
           initial-interval: 3000
+          multiplier: 1.0
+          max-interval: 10000
+        default-requeue-rejected: false
+        idle-event-interval: 60000
+        consumer-batch-enabled: false
+        batch-size: 1
+        batch-buffer-limit: 100
+        batch-timeout: 1000
 
 # 日志配置（开发环境）
 logging:
@@ -47,3 +68,11 @@ logging:
     com.guanwei.framework: DEBUG
     org.springframework.web: DEBUG
     org.mybatis: DEBUG
+    org.springframework.amqp: DEBUG
+    com.rabbitmq: DEBUG
+
+cap:
+  message-queue:
+    type: "rabbitmq"
+    exchange-name: "tles.case-biz.case-v1"
+    exchange-type: "topic"  # 修改为topic类型，匹配.NET版CAP配置

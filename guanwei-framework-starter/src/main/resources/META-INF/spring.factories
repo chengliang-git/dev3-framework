@@ -6,5 +6,4 @@ com.guanwei.framework.config.OracleConfig,\
 com.guanwei.framework.config.MongoConfig,\
 com.guanwei.framework.config.RabbitMQConfig,\
 com.guanwei.framework.config.RedisConfig,\
-com.guanwei.framework.config.SecurityConfig,\
-com.guanwei.framework.cap.CapConfig 
+com.guanwei.framework.config.SecurityConfig

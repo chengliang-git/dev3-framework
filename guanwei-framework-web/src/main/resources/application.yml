@@ -186,3 +186,56 @@ framework:
     max-file-size: 10MB
     max-request-size: 100MB
     allowed-extensions: jpg,jpeg,png,gif,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar
+
+# CAP 组件配置
+cap:
+  # 是否启用 CAP 组件
+  enabled: true
+  
+  # 默认消息组
+  default-group: "default"
+  
+  # 消息存储配置
+  storage:
+    # 存储类型：memory, redis, database
+    type: "memory"
+    
+    # 数据库表前缀（当使用数据库存储时）
+    table-prefix: "cap_"
+    
+    # 消息过期时间（秒）
+    message-expired: 86400  # 24小时
+    
+    # 消息清理间隔（秒）
+    cleanup-interval: 3600  # 1小时
+  
+  # 消息队列配置
+  message-queue:
+    # 队列类型：memory, rabbitmq, kafka
+    type: "memory"
+    
+    # 队列名称前缀
+    queue-prefix: "cap_"
+    
+    # 消费者线程池大小
+    consumer-threads: 10
+    
+    # 消费者批处理大小
+    batch-size: 100
+    
+    # 消费者轮询间隔（毫秒）
+    poll-interval: 1000
+  
+  # 重试配置
+  retry:
+    # 最大重试次数
+    max-retries: 3
+    
+    # 重试间隔（秒）
+    retry-interval: 60
+    
+    # 重试策略：fixed, exponential
+    strategy: "fixed"
+    
+    # 指数退避的基数
+    exponential-base: 2.0

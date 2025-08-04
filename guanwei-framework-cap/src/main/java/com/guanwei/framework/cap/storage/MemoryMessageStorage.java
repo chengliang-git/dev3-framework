@@ -2,6 +2,7 @@ package com.guanwei.framework.cap.storage;
 
 import com.guanwei.framework.cap.CapMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -17,7 +18,6 @@ import java.util.stream.Collectors;
  * 用于开发和测试环境，生产环境建议使用数据库存储
  */
 @Slf4j
-@Component("memoryMessageStorage")
 public class MemoryMessageStorage implements MessageStorage {
 
     private final Map<String, CapMessage> messageStore = new ConcurrentHashMap<>();

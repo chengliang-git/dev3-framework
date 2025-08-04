@@ -78,6 +78,11 @@ public class CapProperties {
         private String exchangeName = "cap.exchange";
 
         /**
+         * 交换机类型：direct, topic, fanout（RabbitMQ专用）
+         */
+        private String exchangeType = "topic";
+
+        /**
          * 队列名称前缀
          */
         private String queuePrefix = "cap_";

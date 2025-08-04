@@ -23,7 +23,7 @@ cap:
   # 消息队列配置
   message-queue:
     # 队列类型：memory, rabbitmq, kafka
-    type: "memory"
+    type: "rabbitmq"
     
     # 队列名称前缀
     queue-prefix: "cap_"

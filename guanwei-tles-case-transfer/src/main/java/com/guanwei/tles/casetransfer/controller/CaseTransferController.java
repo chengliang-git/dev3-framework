@@ -26,7 +26,6 @@ public class CaseTransferController extends BaseMongoController<CaseTransferServ
 
     private final CaseTransferService caseTransferService;
 
-    @Override
     protected CaseTransferService getService() {
         return caseTransferService;
     }

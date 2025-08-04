@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * 案件转存项目 RabbitMQ 配置类
+ * 参考 GitHub CAP 源码的队列命名规则：routeKey + "." + groupName
+ * CAP框架会自动创建和绑定队列，这里只需要配置基础组件
  * 
  * @author Guanwei Framework
  * @since 1.0.0
@@ -22,56 +24,72 @@ public class RabbitMQConfig {
 
     /**
      * CAP 交换机
+     * CAP框架会自动创建这个交换机
      */
     @Bean
-    public DirectExchange capExchange() {
-        return new DirectExchange(capExchangeName, true, false);
+    public TopicExchange capExchange() {
+        return new TopicExchange(capExchangeName, true, false);
     }
 
     /**
-     * CAP 默认队列
+     * 死信交换机
      */
     @Bean
-    public Queue capDefaultQueue() {
-        return new Queue(capDefaultGroup, true, false, false);
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange("cap.dead.letter", true, false);
     }
 
     /**
-     * 绑定 CAP 默认队列到交换机
+     * 死信队列
      */
     @Bean
-    public Binding capDefaultBinding() {
-        return BindingBuilder.bind(capDefaultQueue())
-                .to(capExchange())
-                .with(capExchangeName + "." + capDefaultGroup);
+    public Queue deadLetterQueue() {
+        return new Queue("cap.dead.letter.queue", true, false, false);
     }
 
     /**
-     * 案件新增队列
+     * 绑定死信队列
+     */
+    @Bean
+    public Binding deadLetterBinding() {
+        return BindingBuilder.bind(deadLetterQueue())
+                .to(deadLetterExchange())
+                .with("cap.dead.letter");
+    }
+
+    /**
+     * 案件新增队列 Bean
+     * 用于 @RabbitListener 注解引用
+     * 队列名称：tles.case.filing.case-transfer-group
      */
     @Bean
     public Queue caseFilingQueue() {
-        return new Queue("case-filing-queue", true, false, false);
+        return new Queue("tles.case.filing." + capDefaultGroup, true, false, false);
     }
 
     /**
-     * 案件修改队列
+     * 案件修改队列 Bean
+     * 用于 @RabbitListener 注解引用
+     * 队列名称：case.updated.case-transfer-group
      */
     @Bean
     public Queue caseUpdatedQueue() {
-        return new Queue("case-updated-queue", true, false, false);
+        return new Queue("case.updated." + capDefaultGroup, true, false, false);
     }
 
     /**
-     * 案件删除队列
+     * 案件删除队列 Bean
+     * 用于 @RabbitListener 注解引用
+     * 队列名称：case.deleted.case-transfer-group
      */
     @Bean
     public Queue caseDeletedQueue() {
-        return new Queue("case-deleted-queue", true, false, false);
+        return new Queue("case.deleted." + capDefaultGroup, true, false, false);
     }
 
     /**
-     * 绑定案件相关队列到交换机
+     * 绑定案件新增队列到交换机
+     * 路由键：tles.case.filing
      */
     @Bean
     public Binding caseFilingBinding() {
@@ -79,18 +97,4 @@ public class RabbitMQConfig {
                 .to(capExchange())
                 .with("tles.case.filing");
     }
-
-    @Bean
-    public Binding caseUpdatedBinding() {
-        return BindingBuilder.bind(caseUpdatedQueue())
-                .to(capExchange())
-                .with("case.updated");
-    }
-
-    @Bean
-    public Binding caseDeletedBinding() {
-        return BindingBuilder.bind(caseDeletedQueue())
-                .to(capExchange())
-                .with("case.deleted");
-    }
-} 
+}

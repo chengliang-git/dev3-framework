@@ -2,6 +2,7 @@ package com.guanwei.framework.cap.queue;
 
 import com.guanwei.framework.cap.CapMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -16,7 +17,6 @@ import java.util.stream.Collectors;
  * 用于开发和测试环境，生产环境建议使用 RabbitMQ 或 Kafka
  */
 @Slf4j
-@Component("memoryMessageQueue")
 public class MemoryMessageQueue implements MessageQueue {
 
     private final Map<String, BlockingQueue<CapMessage>> queues = new ConcurrentHashMap<>();
@@ -25,6 +25,7 @@ public class MemoryMessageQueue implements MessageQueue {
     private final AtomicLong messageIdCounter = new AtomicLong(0);
 
     public MemoryMessageQueue() {
+        log.info("CAP Memory MessageQueue initialized");
         // 启动延迟消息处理线程
         scheduler.scheduleWithFixedDelay(this::processDelayMessages, 1, 1, TimeUnit.SECONDS);
     }

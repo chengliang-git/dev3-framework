@@ -1,0 +1,39 @@
+# CAP 组件 RabbitMQ 配置示例
+cap:
+  enabled: true
+  default-group: "default"
+
+  # 使用 RabbitMQ 存储和队列
+  storage:
+    type: "memory" # 可选：redis
+    message-expired: 86400
+    cleanup-interval: 3600
+
+  message-queue:
+    type: "rabbitmq"
+    exchange-name: "tles.case-biz.case-v1" # 使用现有的交换机名称
+    exchange-type: "topic" # 匹配现有交换机的类型：direct, topic, fanout
+    queue-prefix: "cap_"
+    consumer-threads: 10
+    batch-size: 100
+    poll-interval: 1000
+
+  retry:
+    max-retries: 3
+    retry-interval: 60
+    strategy: "fixed"
+
+# RabbitMQ 连接配置
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: test
+
+# 日志配置
+logging:
+  level:
+    com.guanwei.framework.cap: DEBUG
+    org.springframework.amqp: DEBUG

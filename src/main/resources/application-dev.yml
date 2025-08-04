@@ -41,6 +41,7 @@ spring:
     port: 5672
     username: guest
     password: guest
+    virtual-host: /test
 
 # MyBatis Plus配置
 mybatis-plus:

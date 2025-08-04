@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapSubscriber;
+import com.guanwei.framework.cap.queue.CapQueueManager;
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.queue.RabbitMQMessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
@@ -12,6 +13,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -26,90 +28,128 @@ import java.util.function.Consumer;
 /**
  * CAP 订阅者实现类
  * 负责消息的订阅、消费和处理
- * 参考 .NET Core CAP 的消息处理机制
+ * 参考 GitHub CAP 源码的消息处理机制
  */
 @Slf4j
-@Component
 public class CapSubscriberImpl implements CapSubscriber {
 
-    @Autowired
-    private MessageStorage messageStorage;
-
-    @Autowired
-    private MessageQueue messageQueue;
-
-    @Autowired
-    private CapProperties capProperties;
-
-    @Autowired(required = false)
-    private RabbitMQMessageQueue rabbitMQMessageQueue;
+    private final MessageStorage messageStorage;
+    private final MessageQueue messageQueue;
+    private final CapProperties capProperties;
+    private final RabbitMQMessageQueue rabbitMQMessageQueue;
+    private final CapQueueManager capQueueManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Consumer<CapMessage>> handlers = new ConcurrentHashMap<>();
     private final Map<String, CapSubscriber.MessageHandler<?>> typedHandlers = new ConcurrentHashMap<>();
-    private final ExecutorService consumerExecutor;
-    private final ScheduledExecutorService scheduler;
+    private ExecutorService consumerExecutor;
+    private ScheduledExecutorService scheduler;
     private volatile boolean running = true;
 
-    public CapSubscriberImpl() {
-        // 使用默认值初始化，在@PostConstruct中重新配置
+    public CapSubscriberImpl(MessageStorage messageStorage, MessageQueue messageQueue, 
+                           CapProperties capProperties) {
+        this.messageStorage = messageStorage;
+        this.messageQueue = messageQueue;
+        this.capProperties = capProperties;
+        this.rabbitMQMessageQueue = null;
+        this.capQueueManager = null;
+        
+        // 初始化默认线程池，在@PostConstruct中重新配置
         this.consumerExecutor = Executors.newFixedThreadPool(4);
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     @PostConstruct
     public void start() {
-        // 重新配置线程池大小
-        if (capProperties != null && capProperties.getMessageQueue() != null) {
-            // 关闭旧的线程池
-            consumerExecutor.shutdown();
+        log.info("Starting CAP Subscriber...");
+        
+        try {
+            // 重新配置线程池大小
+            if (capProperties != null && capProperties.getMessageQueue() != null) {
+                // 关闭旧的线程池
+                if (consumerExecutor != null && !consumerExecutor.isShutdown()) {
+                    consumerExecutor.shutdown();
+                    try {
+                        if (!consumerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                            consumerExecutor.shutdownNow();
+                        }
+                    } catch (InterruptedException e) {
+                        consumerExecutor.shutdownNow();
+                        Thread.currentThread().interrupt();
+                    }
+                }
 
-            // 创建新的线程池
-            ThreadPoolExecutor newExecutor = new ThreadPoolExecutor(
-                    capProperties.getMessageQueue().getConsumerThreads(),
-                    capProperties.getMessageQueue().getConsumerThreads(),
-                    0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<>(),
-                    Executors.defaultThreadFactory());
+                // 创建新的线程池
+                int consumerThreads = capProperties.getMessageQueue().getConsumerThreads();
+                consumerExecutor = new ThreadPoolExecutor(
+                        consumerThreads,
+                        consumerThreads,
+                        0L, TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<>(),
+                        Executors.defaultThreadFactory(),
+                        new ThreadPoolExecutor.CallerRunsPolicy());
 
-            // 启动消息消费调度器
-            scheduler.scheduleWithFixedDelay(
-                    this::consumeMessages,
-                    0,
-                    capProperties.getMessageQueue().getPollInterval(),
-                    TimeUnit.MILLISECONDS);
+                // 启动消息消费调度器
+                long pollInterval = capProperties.getMessageQueue().getPollInterval();
+                scheduler.scheduleWithFixedDelay(
+                        this::consumeMessages,
+                        0,
+                        pollInterval,
+                        TimeUnit.MILLISECONDS);
 
-            // 启动清理过期消息的调度器
-            scheduler.scheduleWithFixedDelay(
-                    this::cleanupExpiredMessages,
-                    capProperties.getStorage().getCleanupInterval(),
-                    capProperties.getStorage().getCleanupInterval(),
-                    TimeUnit.SECONDS);
+                // 启动清理过期消息的调度器
+                long cleanupInterval = capProperties.getStorage().getCleanupInterval();
+                scheduler.scheduleWithFixedDelay(
+                        this::cleanupExpiredMessages,
+                        cleanupInterval,
+                        cleanupInterval,
+                        TimeUnit.SECONDS);
 
-            log.info("CAP Subscriber started with {} consumer threads",
-                    capProperties.getMessageQueue().getConsumerThreads());
-        } else {
-            log.warn("CAP Properties not available, using default configuration");
+                log.info("CAP Subscriber started with {} consumer threads, poll interval: {}ms",
+                        consumerThreads, pollInterval);
+            } else {
+                log.warn("CAP Properties not available, using default configuration");
+                
+                // 使用默认配置
+                scheduler.scheduleWithFixedDelay(
+                        this::consumeMessages,
+                        0,
+                        1000, // 1秒轮询间隔
+                        TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            log.error("Failed to start CAP Subscriber", e);
+            throw new RuntimeException("Failed to start CAP Subscriber", e);
         }
     }
 
     @PreDestroy
     public void stop() {
+        log.info("Stopping CAP Subscriber...");
         running = false;
-        consumerExecutor.shutdown();
-        scheduler.shutdown();
+        
+        if (consumerExecutor != null) {
+            consumerExecutor.shutdown();
+        }
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
 
         try {
-            if (!consumerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+            if (consumerExecutor != null && !consumerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
                 consumerExecutor.shutdownNow();
             }
-            if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
+            if (scheduler != null && !scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            consumerExecutor.shutdownNow();
-            scheduler.shutdownNow();
+            if (consumerExecutor != null) {
+                consumerExecutor.shutdownNow();
+            }
+            if (scheduler != null) {
+                scheduler.shutdownNow();
+            }
         }
 
         log.info("CAP Subscriber stopped");
@@ -124,6 +164,10 @@ public class CapSubscriberImpl implements CapSubscriber {
     public void subscribe(String name, String group, Consumer<CapMessage> handler) {
         String key = buildHandlerKey(name, group);
         handlers.put(key, handler);
+        
+        // 确保队列存在并正确绑定
+        ensureQueueExists(name, group);
+        
         log.info("Subscribed to message: {} (group: {})", name, group);
     }
 
@@ -136,6 +180,10 @@ public class CapSubscriberImpl implements CapSubscriber {
     public <T> void subscribe(String name, String group, CapSubscriber.MessageHandler<T> handler) {
         String key = buildHandlerKey(name, group);
         typedHandlers.put(key, handler);
+        
+        // 确保队列存在并正确绑定
+        ensureQueueExists(name, group);
+        
         log.info("Subscribed to typed message: {} (group: {})", name, group);
     }
 
@@ -153,6 +201,25 @@ public class CapSubscriberImpl implements CapSubscriber {
     }
 
     /**
+     * 确保队列存在并正确绑定
+     * 参考 GitHub CAP 源码：在订阅时创建队列和绑定
+     */
+    private void ensureQueueExists(String messageName, String group) {
+        try {
+            if (capQueueManager != null) {
+                // 使用队列管理器创建队列并绑定
+                String queueName = capQueueManager.createQueueAndBind(messageName, group);
+                log.info("Ensured queue exists and bound: {} for message: {} (group: {})", 
+                        queueName, messageName, group);
+            } else {
+                log.debug("Queue manager not available, queue will be created when first message is sent");
+            }
+        } catch (Exception e) {
+            log.error("Failed to ensure queue exists for message: {} (group: {})", messageName, group, e);
+        }
+    }
+
+    /**
      * 消费消息
      */
     private void consumeMessages() {
@@ -160,23 +227,27 @@ public class CapSubscriberImpl implements CapSubscriber {
             return;
         }
 
-        // 处理所有注册的处理器
-        handlers.forEach((key, handler) -> {
-            String[] parts = key.split(":");
-            String name = parts[0];
-            String group = parts[1];
+        try {
+            // 处理所有注册的处理器
+            handlers.forEach((key, handler) -> {
+                String[] parts = key.split(":");
+                String name = parts[0];
+                String group = parts[1];
 
-            consumeMessagesForHandler(name, group, handler);
-        });
+                consumeMessagesForHandler(name, group, handler);
+            });
 
-        // 处理带类型的处理器
-        typedHandlers.forEach((key, handler) -> {
-            String[] parts = key.split(":");
-            String name = parts[0];
-            String group = parts[1];
+            // 处理带类型的处理器
+            typedHandlers.forEach((key, handler) -> {
+                String[] parts = key.split(":");
+                String name = parts[0];
+                String group = parts[1];
 
-            consumeMessagesForTypedHandler(name, group, handler);
-        });
+                consumeMessagesForTypedHandler(name, group, handler);
+            });
+        } catch (Exception e) {
+            log.error("Error in consumeMessages", e);
+        }
     }
 
     /**
@@ -186,9 +257,10 @@ public class CapSubscriberImpl implements CapSubscriber {
         String queueName = buildQueueName(name, group);
 
         try {
+            int batchSize = capProperties != null ? capProperties.getMessageQueue().getBatchSize() : 100;
             List<CapMessage> messages = messageQueue.receiveBatch(
                     queueName,
-                    capProperties.getMessageQueue().getBatchSize(),
+                    batchSize,
                     1000 // 1秒超时
             );
 
@@ -208,9 +280,10 @@ public class CapSubscriberImpl implements CapSubscriber {
         String queueName = buildQueueName(name, group);
 
         try {
+            int batchSize = capProperties != null ? capProperties.getMessageQueue().getBatchSize() : 100;
             List<CapMessage> messages = messageQueue.receiveBatch(
                     queueName,
-                    capProperties.getMessageQueue().getBatchSize(),
+                    batchSize,
                     1000 // 1秒超时
             );
 
@@ -226,6 +299,18 @@ public class CapSubscriberImpl implements CapSubscriber {
      * 处理消息
      */
     private void processMessage(CapMessage message, Consumer<CapMessage> handler, String queueName) {
+        if (consumerExecutor == null || consumerExecutor.isShutdown()) {
+            log.warn("Consumer executor is not available, processing message synchronously");
+            try {
+                handler.accept(message);
+                messageQueue.acknowledge(queueName, message.getId());
+            } catch (Exception e) {
+                log.error("Failed to process message: {}", message.getId(), e);
+                handleMessageError(message, queueName);
+            }
+            return;
+        }
+
         consumerExecutor.submit(() -> {
             try {
                 // 更新消息状态为重试中
@@ -251,6 +336,19 @@ public class CapSubscriberImpl implements CapSubscriber {
      */
     private void processTypedMessage(CapMessage message, CapSubscriber.MessageHandler<Object> handler,
             String queueName) {
+        if (consumerExecutor == null || consumerExecutor.isShutdown()) {
+            log.warn("Consumer executor is not available, processing typed message synchronously");
+            try {
+                Object result = handler.handle(message);
+                messageQueue.acknowledge(queueName, message.getId());
+                log.debug("Successfully processed typed message: {} -> {}", message.getId(), result);
+            } catch (Exception e) {
+                log.error("Failed to process typed message: {}", message.getId(), e);
+                handleMessageError(message, queueName);
+            }
+            return;
+        }
+
         consumerExecutor.submit(() -> {
             try {
                 // 更新消息状态为重试中
@@ -298,10 +396,12 @@ public class CapSubscriberImpl implements CapSubscriber {
      */
     private void cleanupExpiredMessages() {
         try {
-            int deletedCount = messageStorage.deleteExpiredMessages(
-                    capProperties.getStorage().getMessageExpired());
-            if (deletedCount > 0) {
-                log.info("Cleaned up {} expired messages", deletedCount);
+            if (capProperties != null) {
+                int deletedCount = messageStorage.deleteExpiredMessages(
+                        capProperties.getStorage().getMessageExpired());
+                if (deletedCount > 0) {
+                    log.info("Cleaned up {} expired messages", deletedCount);
+                }
             }
         } catch (Exception e) {
             log.error("Error cleaning up expired messages", e);
@@ -317,9 +417,12 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     /**
      * 构建队列名称
-     * 参考 .NET Core CAP 的命名规则：group 作为队列名
+     * 参考 GitHub CAP 源码：routeKey + "." + groupName
      */
     private String buildQueueName(String name, String group) {
-        return group;
+        if (capQueueManager != null) {
+            return capQueueManager.buildQueueName(name, group);
+        }
+        return name + "." + group;
     }
 }

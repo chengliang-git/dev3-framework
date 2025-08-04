@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -23,40 +24,40 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * RabbitMQ 消息队列实现
- * 参考 .NET Core CAP 的队列命名规则：exchange + "." + group
+ * 参考 GitHub CAP 源码的队列命名规则：routeKey + "." + groupName
  * 
  * @author Guanwei Framework
  * @since 1.0.0
  */
 @Slf4j
-@Component("rabbitMQMessageQueue")
 public class RabbitMQMessageQueue implements MessageQueue {
 
-    @Autowired
-    private AmqpAdmin amqpAdmin;
-
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-
-    @Autowired
-    private ConnectionFactory connectionFactory;
-
-    @Value("${cap.message-queue.exchange-name:cap.exchange}")
-    private String exchangeName;
-
-    @Value("${cap.message-queue.queue-prefix:cap_}")
-    private String queuePrefix;
+    private final AmqpAdmin amqpAdmin;
+    private final RabbitTemplate rabbitTemplate;
+    private final ConnectionFactory connectionFactory;
+    private final CapQueueManager capQueueManager;
+    private final String exchangeName;
+    private final String queuePrefix;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, SimpleMessageListenerContainer> containers = new ConcurrentHashMap<>();
     private final Map<String, List<CapMessage>> messageBuffers = new ConcurrentHashMap<>();
 
+    public RabbitMQMessageQueue(AmqpAdmin amqpAdmin, RabbitTemplate rabbitTemplate,
+            ConnectionFactory connectionFactory, CapQueueManager capQueueManager,
+            String exchangeName, String queuePrefix) {
+        this.amqpAdmin = amqpAdmin;
+        this.rabbitTemplate = rabbitTemplate;
+        this.connectionFactory = connectionFactory;
+        this.capQueueManager = capQueueManager;
+        this.exchangeName = exchangeName;
+        this.queuePrefix = queuePrefix;
+    }
+
     @PostConstruct
     public void init() {
-        // 创建默认交换机
-        Exchange exchange = new DirectExchange(exchangeName, true, false);
-        amqpAdmin.declareExchange(exchange);
-        log.info("CAP RabbitMQ exchange declared: {}", exchangeName);
+        log.info("CAP RabbitMQ MessageQueue initialized with exchange: {}", exchangeName);
+        // 队列管理器的初始化已经在CapQueueManager中处理
     }
 
     @PreDestroy
@@ -70,13 +71,17 @@ public class RabbitMQMessageQueue implements MessageQueue {
     @Override
     public boolean send(String queueName, CapMessage message) {
         try {
-            String routingKey = buildRoutingKey(message.getName(), message.getGroup());
+            // 使用队列管理器确保队列存在并正确绑定
+            String actualQueueName = capQueueManager.createQueueAndBind(message.getName(), message.getGroup());
+
+            // 使用消息名称作为路由键
+            String routingKey = message.getName();
             String messageJson = objectMapper.writeValueAsString(message);
-            
+
             // 发送消息到交换机
             rabbitTemplate.convertAndSend(exchangeName, routingKey, messageJson);
-            
-            log.debug("Sent message to queue: {} with routing key: {}", queueName, routingKey);
+
+            log.debug("Sent message to queue: {} with routing key: {}", actualQueueName, routingKey);
             return true;
         } catch (Exception e) {
             log.error("Failed to send message to queue: {}", queueName, e);
@@ -104,10 +109,26 @@ public class RabbitMQMessageQueue implements MessageQueue {
     @Override
     public CapMessage receive(String queueName, long timeout) {
         try {
+            // 确保队列存在
+            if (!capQueueManager.queueExists(queueName)) {
+                log.warn("Queue does not exist: {}, creating it", queueName);
+                // 从队列名称中提取消息名称和组
+                String messageName = capQueueManager.extractMessageTopicFromQueueName(queueName);
+                String group = capQueueManager.extractGroupFromQueueName(queueName);
+                if (messageName != null && group != null) {
+                    capQueueManager.createQueueAndBind(messageName, group);
+                } else {
+                    log.error("Cannot extract message name and group from queue name: {}", queueName);
+                    return null;
+                }
+            }
+
             // 从队列接收消息
             Object result = rabbitTemplate.receiveAndConvert(queueName, timeout);
             if (result != null) {
-                return objectMapper.readValue(result.toString(), CapMessage.class);
+                String messageJson = result.toString();
+                log.debug("Received message from queue {}: {}", queueName, messageJson);
+                return objectMapper.readValue(messageJson, CapMessage.class);
             }
             return null;
         } catch (Exception e) {
@@ -120,7 +141,7 @@ public class RabbitMQMessageQueue implements MessageQueue {
     public List<CapMessage> receiveBatch(String queueName, int maxCount, long timeout) {
         List<CapMessage> messages = new CopyOnWriteArrayList<>();
         long endTime = System.currentTimeMillis() + timeout;
-        
+
         while (messages.size() < maxCount && System.currentTimeMillis() < endTime) {
             CapMessage message = receive(queueName, 100); // 100ms timeout for each message
             if (message != null) {
@@ -129,7 +150,11 @@ public class RabbitMQMessageQueue implements MessageQueue {
                 break; // 没有更多消息
             }
         }
-        
+
+        if (!messages.isEmpty()) {
+            log.debug("Received {} messages from queue: {}", messages.size(), queueName);
+        }
+
         return messages;
     }
 
@@ -147,38 +172,9 @@ public class RabbitMQMessageQueue implements MessageQueue {
         return true;
     }
 
-    /**
-     * 创建队列（内部方法，用于初始化）
-     */
-    private boolean createQueue(String queueName) {
-        try {
-            // 创建队列
-            Queue queue = new Queue(queueName, true, false, false);
-            amqpAdmin.declareQueue(queue);
-            
-            // 绑定队列到交换机，使用队列名作为路由键
-            Binding binding = new Binding(queueName, Binding.DestinationType.QUEUE, 
-                    exchangeName, queueName, null);
-            amqpAdmin.declareBinding(binding);
-            
-            log.info("Created CAP queue: {} and bound to exchange: {}", queueName, exchangeName);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to create queue: {}", queueName, e);
-            return false;
-        }
-    }
-
     @Override
     public boolean deleteQueue(String queueName) {
-        try {
-            amqpAdmin.deleteQueue(queueName);
-            log.info("Deleted CAP queue: {}", queueName);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to delete queue: {}", queueName, e);
-            return false;
-        }
+        return capQueueManager.deleteQueue(queueName);
     }
 
     @Override
@@ -195,50 +191,36 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
     @Override
     public boolean clearQueue(String queueName) {
-        try {
-            // 清空队列中的所有消息
-            amqpAdmin.purgeQueue(queueName, false);
-            log.info("Cleared CAP queue: {}", queueName);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to clear queue: {}", queueName, e);
-            return false;
-        }
+        return capQueueManager.purgeQueue(queueName);
     }
 
     @Override
     public boolean queueExists(String queueName) {
-        try {
-            // 简化实现，总是返回true
-            log.debug("Queue existence check not implemented for RabbitMQ: {}", queueName);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to check queue existence: {}", queueName, e);
-            return false;
-        }
+        return capQueueManager.queueExists(queueName);
     }
 
     /**
      * 构建路由键
-     * 参考 .NET Core CAP 的命名规则：exchange + "." + group
+     * 参考 .NET CAP 源码：直接使用消息名称作为路由键
+     * 例如：tles.case.filing -> tles.case.filing
      */
     private String buildRoutingKey(String messageName, String group) {
-        return exchangeName + "." + group;
+        return messageName;
     }
 
     /**
      * 构建队列名称
-     * 参考 .NET Core CAP 的命名规则：group 作为队列名
+     * 参考 GitHub CAP 源码：routeKey + "." + groupName
      */
     public String buildQueueName(String messageName, String group) {
-        return group;
+        return capQueueManager.buildQueueName(messageName, group);
     }
 
     /**
      * 创建消息监听器容器
-     * 参考 .NET Core CAP 的消费者实现
+     * 参考 GitHub CAP 源码的消费者实现
      */
-    public SimpleMessageListenerContainer createMessageListenerContainer(String queueName, 
+    public SimpleMessageListenerContainer createMessageListenerContainer(String queueName,
             MessageListenerAdapter messageListenerAdapter) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
         container.setQueueNames(queueName);
@@ -247,10 +229,10 @@ public class RabbitMQMessageQueue implements MessageQueue {
         container.setPrefetchCount(1);
         container.setConcurrentConsumers(1);
         container.setMaxConcurrentConsumers(1);
-        
+
         containers.put(queueName, container);
         container.start();
-        
+
         log.info("Created message listener container for queue: {}", queueName);
         return container;
     }
