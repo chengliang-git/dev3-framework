@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("CASE_PUNISH")
+@TableName("LE_CasePunish")
 public class CasePunishEntity extends BaseEntity {
 
     /**

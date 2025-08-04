@@ -234,8 +234,10 @@ public class CapQueueManager {
      */
     public String extractMessageTopicFromQueueName(String queueName) {
         if (queueName.contains(".")) {
-            // 取第一个点之前的部分作为消息主题
-            return queueName.substring(0, queueName.indexOf("."));
+            // 取最后一个点之前的部分作为消息主题
+            // 例如：tles.case.filing.case-transfer-group -> tles.case.filing
+            int lastDotIndex = queueName.lastIndexOf(".");
+            return queueName.substring(0, lastDotIndex);
         }
         // 如果队列名不包含点，则使用队列名作为消息主题
         return queueName;
@@ -249,8 +251,10 @@ public class CapQueueManager {
      */
     public String extractGroupFromQueueName(String queueName) {
         if (queueName.contains(".")) {
-            // 取第一个点之后的部分作为消息组
-            return queueName.substring(queueName.indexOf(".") + 1);
+            // 取最后一个点之后的部分作为消息组
+            // 例如：tles.case.filing.case-transfer-group -> case-transfer-group
+            int lastDotIndex = queueName.lastIndexOf(".");
+            return queueName.substring(lastDotIndex + 1);
         }
         // 如果队列名不包含点，则使用默认组
         return defaultGroup;

@@ -78,6 +78,30 @@ public class CapMessageController {
     }
 
     /**
+     * 发送案件违法信息录入消息
+     */
+    @PostMapping("/send/case-illegal")
+    public Map<String, Object> sendCaseIllegal(@RequestBody Map<String, Object> caseData) {
+        try {
+            String messageId = capPublisher.publish("tles.case.case-illegal", caseData, "case-transfer-group");
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("messageId", messageId);
+            result.put("message", "案件违法信息录入消息发送成功");
+
+            log.info("发送案件违法信息录入消息: {}", messageId);
+            return result;
+        } catch (Exception e) {
+            log.error("发送案件违法信息录入消息失败", e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            return result;
+        }
+    }
+
+    /**
      * 发送案件删除消息
      */
     @PostMapping("/send/case-deleted")
@@ -111,8 +135,11 @@ public class CapMessageController {
         status.put("timestamp", LocalDateTime.now());
         status.put("subscribedTopics", new String[] {
                 "tles.case.filing",
-                "case.updated",
-                "case.deleted"
+                "tles.case-handling-opinion.finnal-review",
+                "tles.case.case-illegal",
+                "tles.case.admin-penalty-decision",
+                "tles.case.closed",
+                "tles.case.case-cancel"
         });
         status.put("messageGroup", "case-transfer-group");
         status.put("status", "running");

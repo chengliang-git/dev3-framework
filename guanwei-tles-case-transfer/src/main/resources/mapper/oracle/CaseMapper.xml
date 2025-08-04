@@ -3,263 +3,221 @@
 <mapper namespace="com.guanwei.tles.casetransfer.mapper.oracle.CaseMapper">
 
     <!-- 根据案件ID查询案件信息 -->
-    <select id="selectByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseEntity">
+    <select id="selectByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseInfoEntity">
         SELECT 
-            CASE_ID as caseId,
-            VEHICLE_SHIP_NAME as vehicleShipName,
-            ILLEGAL_OBJECTS as illegalObjects,
-            COMPANY_NAME as companyName,
-            PARTY_NAME as partyName,
-            ID_CARD_NUM as idCardNum,
-            STATE as state,
-            CASE_FILING_TIME as caseFilingTime,
-            ILLEGAL_LOCATION as illegalLocation,
-            CASE_NO as caseNo,
-            SOURCE as source,
-            ILLEGAL_BEHAVIOR as illegalBehavior,
-            CASE_REASON as caseReason,
-            ILLEGAL_CONTENT as illegalContent,
-            CASE_BASIS as caseBasis,
-            REMARKS as remarks,
-            CASE_TYPE as caseType,
-            ILLEGAL_TIME as illegalTime,
-            OFFICERS as officers,
-            ILLEGAL_ID as illegalId,
-            AREA_CODE as areaCode,
-            ORG_ID as orgId,
-            HANDLE_ORG_ID as handleOrgId,
-            CLOSE_TIME as closeTime,
-            PUNISH_STATE as punishState,
-            RECEIPT_DATE as receiptDate,
-            IS_COMMIT as isCommit,
-            CASE_CATEGORY as caseCategory,
-            ACCEPT_CHECK as acceptCheck,
-            RUSH_EMIGRATE as rushEmigrate,
-            CHECK_LOCATION as checkLocation,
-            VEHICLE_SITU as vehicleSitu,
-            LONGITUDE as longitude,
-            LATITUDE as latitude,
-            LAW_ENFOR_CATEGORY as lawEnforCategory,
-            INDUSTRY_TYPE as industryType,
-            DEP_ID as depId,
-            DEP_NAME as depName,
-            REGIST_AREA_CODE as registAreaCode,
-            INNER_UNIT_ID as innerUnitId,
-            SOCIAL_CREDIT_CODE as socialCreditCode,
-            PROCESS_STATUS as processStatus,
-            SOURCE_INFO as sourceInfo,
-            CASE_NO_TMPL as caseNoTmpl,
-            ORG_NAME as orgName,
-            FINAL_DECISION as finalDecision,
-            IS_DELIVER_CASE as isDeliverCase,
-            PENALTY_DECISION_TIME as penaltyDecisionTime,
-            NOT_PUNISH as notPunish,
-            CLOSER as closer,
-            REGION_CODE as regionCode,
-            ACTUAL_PUNISH as actualPunish,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_INFO 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
+            caseId,
+            vehicleShipName,
+            illegalObjects,
+            companyName,
+            partyName,
+            idCardNum,
+            state,
+            caseFilingTime,
+            illegalLocation,
+            caseNo,
+            source,
+            illegalBehavior,
+            caseReason,
+            illegalContent,
+            caseBasis,
+            remarks,
+            caseType,
+            illegalTime,
+            officers,
+            illegalId,
+            areaCode,
+            orgId,
+            handleOrgId,
+            closeTime,
+            punishState,
+            receiptDate,
+            isCommit,
+            caseCategory,
+            acceptCheck,
+            rushEmigrate,
+            checkLocation,
+            vehicleSitu,
+            longitude,
+            latitude,
+            lawEnforCategory,
+            industryType,
+            depId,
+            depName,
+            registAreaCode,
+            innerUnitId,
+            socialCreditCode,
+            processStatus,
+            sourceInfo,
+            caseNoTmpl,
+            orgName,
+            finalDecision,
+            isDeliverCase,
+            penaltyDecisionTime,
+            notPunish,
+            closer,
+            regionCode,
+            createTime,
+            modifyTime,
+            creator,
+            modifier
+        FROM LE_CaseInfo
+        WHERE caseId = #{caseId}
     </select>
 
     <!-- 根据案件ID查询案件当事人信息 -->
-    <select id="selectPartiesByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CasePartyEntity">
+    <select id="selectPartiesByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CasePersonalEntity">
         SELECT 
-            CASE_ID as caseId,
-            PERSON_NAME as personName,
-            SEX as sex,
-            AGE as age,
-            PHONE as phone,
-            AREA_CODE as areaCode,
-            AREA_CODE_NAME as areaCodeName,
-            ADDRESS as address,
-            POST as post,
-            ID_CARD_TYPE as idCardType,
-            ID_CARD_NUM as idCardNum,
-            PRAC_CERT_NUM as pracCertNum,
-            ISSUE_ORG as issueOrg,
-            COMPANY_NAME as companyName,
-            POSTCODE as postcode,
-            NATION as nation,
-            SOCIAL_CREDIT_CODE as socialCreditCode,
-            OWNER_LICENSE_NUM as ownerLicenseNum,
-            OWNER_ID as ownerId,
-            COMPANY_POST as companyPost,
-            IS_SELF_EMPLOYED as isSelfEmployed,
-            OWNER_NAME as ownerName,
-            REGIST_CODE as registCode,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_PERSONAL 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            caseId,
+            personName,
+            sex,
+            age,
+            phone,
+            areaCode,
+            areaCodeName,
+            address,
+            post,
+            idCardType,
+            idCardNum,
+            pracCertNum,
+            issueOrg,
+            companyName,
+            postcode,
+            nation,
+            socialCreditCode,
+            ownerLicenseNum,
+            ownerId,
+            companyPost,
+            isSelfEmployed,
+            ownerName,
+            registCode,
+            createTime,
+            modifyTime,
+            creator,
+            modifier,
+            delFlag
+        FROM CASE_PERSONAL
+        WHERE caseId = #{caseId} 
+        AND delFlag = 0
     </select>
 
     <!-- 根据案件ID查询案件当事单位信息 -->
     <select id="selectCompaniesByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseCompanyEntity">
         SELECT 
-            CASE_ID as caseId,
-            OWNER_ID as ownerId,
-            COMPANY_NAME as companyName,
-            SOCIAL_CREDIT_CODE as socialCreditCode,
-            LEGAL_NAME as legalName,
-            LEGAL_ID_CERT_NUM as legalIdCertNum,
-            ADDRESS as address,
-            REGIST_AREA_NAME as registAreaName,
-            REGIST_AREA_CODE as registAreaCode,
-            OPERATE_AREA_CODE as operateAreaCode,
-            OPERATE_ADDRESS as operateAddress,
-            PHONE as phone,
-            OWNER_LICENSE_NUM as ownerLicenseNum,
-            LICENSE_FIRST_DATE as licenseFirstDate,
-            LICENSE_ISSUE_DATE as licenseIssueDate,
-            ISSUE_ORG as issueOrg,
-            LEGAL_POST as legalPost,
-            LEGAL_ID_CERT_TYPE as legalIdCertType,
-            REGIST_CODE as registCode,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_COMPANY 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            caseId,
+            ownerId,
+            companyName,
+            socialCreditCode,
+            legalName,
+            legalIdCertNum,
+            address,
+            registAreaName,
+            registAreaCode,
+            operateAreaCode,
+            operateAddress,
+            phone,
+            ownerLicenseNum,
+            licenseFirstDate,
+            licenseIssueDate,
+            issueOrg,
+            legalPost,
+            legalIdCertType,
+            registCode,
+            createTime,
+            modifyTime,
+            creator,
+            modifier
+        FROM LE_CaseCompany
+        WHERE caseId = #{caseId}
     </select>
 
     <!-- 根据案件ID查询案件附件信息 -->
-    <select id="selectAttachmentsByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseDocumentEntity">
+    <select id="selectAttachmentsByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseAttachmentEntity">
         SELECT 
-            ATTACH_ID as attachId,
-            ATTACH_NAME as attachName,
-            FILE_PATH as filePath,
-            FILE_SIZE as fileSize,
-            FILE_TYPE as fileType,
-            OBJECT_ID as objectId,
-            ATTACH_CATEGORY as attachCategory,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_ATTACHMENT 
-        WHERE OBJECT_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            attachId,
+            attachName,
+            filePath,
+            fileSize,
+            fileType,
+            objectId,
+            attachCategory
+        FROM LE_CaseAttachment
+        WHERE objectId = #{caseId}
     </select>
 
     <!-- 根据案件ID查询案件车辆信息 -->
     <select id="selectVehiclesByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseVehicleEntity">
         SELECT 
-            CASE_ID as caseId,
-            VEHICLE_ID as vehicleId,
-            VEHICLE_NUM as vehicleNum,
-            TRAN_LICENSE_NUM as tranLicenseNum,
-            PLATE_COLOR as plateColor,
-            TRAILER_NUM as trailerNum,
-            IS_LIN as isLin,
-            SPECIFICATION as specification,
-            STRUCTURE as structure,
-            VEHICLE_TYPE as vehicleType,
-            BRAND_MODEL as brandModel,
-            VEHICLE_AREA as vehicleArea,
-            OWNER_NAME as ownerName,
-            OWNER_ADDRESS as ownerAddress,
-            OWNER_LICENSE_NUM as ownerLicenseNum,
-            OWNER_PHONE as ownerPhone,
-            DRIVER_NAME as driverName,
-            DRIVER_ADDRESS as driverAddress,
-            DRIVER_ID_CARD_TYPE as driverIdCardType,
-            DRIVER_ID_CARD_NUM as driverIdCardNum,
-            DRIVER_PRAC_CERT_NUM as driverPracCertNum,
-            PRAC_CERT_ADDRESS as pracCertAddress,
-            PRAC_CERT_AREA_CODE as pracCertAreaCode,
-            DRIVER_ISSUE_ORG as driverIssueOrg,
-            DRIVER_OWNER_RELATION as driverOwnerRelation,
-            DRIVER_PHONE as driverPhone,
-            OWNER_ID as ownerId,
-            TRANS_TYPE as transType,
-            CASE_RELATION as caseRelation,
-            COMPANY_POSITION as companyPosition,
-            AXLE_NUM as axleNum,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_VEHICLE 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            caseId,
+            vehicleId,
+            vehicleNum,
+            tranLicenseNum,
+            plateColor,
+            trailerNum,
+            isLin,
+            specification,
+            structure,
+            vehicleType,
+            brandModel,
+            vehicleArea,
+            ownerName,
+            ownerAddress,
+            ownerLicenseNum,
+            ownerPhone,
+            driverName,
+            driverAddress,
+            driverIdCardType,
+            driverIdCardNum,
+            driverPracCertNum,
+            pracCertAddress,
+            pracCertAreaCode,
+            driverIssueOrg,
+            driverOwnerRelation,
+            driverPhone,
+            ownerId,
+            transType,
+            caseRelation,
+            companyPosition,
+            axleNum
+        FROM LE_CaseVehicle
+        WHERE caseId = #{caseId}
     </select>
 
     <!-- 根据案件ID查询案件处罚信息 -->
     <select id="selectPunishesByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CasePunishEntity">
         SELECT 
-            PUNISH_ID as punishId,
-            IS_SPOT_PUNISH as isSpotPunish,
-            IS_COLLECT_FINE as isCollectFine,
-            COLLECT_FINE_REASON as collectFineReason,
-            PUNISH_RESULT as punishResult,
-            PUNISH_BASIS as punishBasis,
-            CASE_ID as caseId,
-            SOURCE as source,
-            SITU_ID as situId,
-            IS_MITIGATE as isMitigate,
-            MITIGATE_BASIS as mitigateBasis,
-            RESP_PERSON as respPerson,
-            PUNISH_CONTENT as punishContent,
-            DEL_FLAG as delFlag,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            ORDER_NUM as orderNum
-        FROM CASE_PUNISH 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            punishId,
+            isSpotPunish,
+            isCollectFine,
+            collectFineReason,
+            punishResult,
+            punishBasis,
+            caseId,
+            source,
+            situId,
+            isMitigate,
+            mitigateBasis,
+            respPerson,
+            punishContent
+        FROM LE_CasePunish
+        WHERE caseId = #{caseId}
     </select>
 
     <!-- 根据案件ID查询案件执法人员信息 -->
     <select id="selectOfficersByCaseId" resultType="com.guanwei.tles.casetransfer.entity.oracle.CaseOfficerEntity">
         SELECT 
-            CASE_OFFICER_ID as caseOfficerId,
-            OFFICER_ID as officerId,
-            OFFICER_NAME as officerName,
-            LAW_CARD_NUM as lawCardNum,
-            UNIT_ID as unitId,
-            CASE_ID as caseId,
-            ORG_NAME as orgName,
-            DEP_NAME as depName,
-            OFFICER_TYPE as officerType,
-            SIGN_PIC_URL as signPicUrl,
-            OFFICER_CREDENTIAL_PIC_URL as officerCredentialPicUrl,
-            CREATE_TIME as createTime,
-            MODIFY_TIME as modifyTime,
-            CREATOR as creator,
-            MODIFIER as modifier,
-            DEL_FLAG as delFlag,
-            ORDER_NUM as orderNum
-        FROM CASE_OFFICER 
-        WHERE CASE_ID = #{caseId} 
-        AND DEL_FLAG = 0
-        ORDER BY ORDER_NUM
+            caseOfficerId,
+            officerId,
+            officerName,
+            lawCardNum,
+            unitId,
+            caseId,
+            orgName,
+            depName,
+            officerType,
+            signPicUrl,
+            officerCredentialPicUrl
+        FROM LE_CaseOfficer
+        WHERE caseId = #{caseId}
     </select>
 
 </mapper> 

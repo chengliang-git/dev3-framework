@@ -113,10 +113,10 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
                     Class<?> beanClass = bean.getClass();
                     scannedCount++;
 
-                    // 检查是否实现了CapSubscribe接口
-                    if (bean instanceof com.guanwei.framework.cap.CapSubscribe) {
-                        int handlersInBean = scanMethodsForSubscribe(bean, beanClass);
-                        handlerCount += handlersInBean;
+                    // 扫描所有带有@CapSubscribe注解的方法
+                    int handlersInBean = scanMethodsForSubscribe(bean, beanClass);
+                    handlerCount += handlersInBean;
+                    if (handlersInBean > 0) {
                         log.debug("Found {} handlers in bean: {}", handlersInBean, beanName);
                     }
                 } else {

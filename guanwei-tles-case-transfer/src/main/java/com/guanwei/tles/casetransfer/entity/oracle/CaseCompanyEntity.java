@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("CASE_COMPANY")
+@TableName("LE_CaseCompany")
 public class CaseCompanyEntity extends BaseEntity {
 
     /**

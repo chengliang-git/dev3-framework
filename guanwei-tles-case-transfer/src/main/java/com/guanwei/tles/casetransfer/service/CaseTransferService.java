@@ -1,8 +1,8 @@
 package com.guanwei.tles.casetransfer.service;
 
 import com.guanwei.framework.common.service.BaseMongoService;
-import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import com.guanwei.tles.casetransfer.entity.Case;
+import com.guanwei.tles.casetransfer.entity.oracle.CaseInfoEntity;
 
 /**
  * 案件转存服务接口
@@ -15,23 +15,23 @@ public interface CaseTransferService extends BaseMongoService<Case> {
     /**
      * 处理案件新增消息
      * 
-     * @param caseMessage 案件消息
+     * @param caseEntity 案件消息
      */
-    void handleCaseCreated(CaseMessage caseMessage);
+    void handleCaseCreated(CaseInfoEntity caseEntity);
 
     /**
      * 处理案件修改消息
      * 
-     * @param caseMessage 案件消息
+     * @param caseEntity 案件消息
      */
-    void handleCaseUpdated(CaseMessage caseMessage);
+    void handleCaseUpdated(CaseInfoEntity caseEntity);
 
     /**
      * 处理案件删除消息
      * 
-     * @param caseMessage 案件消息
+     * @param caseEntity 案件消息
      */
-    void handleCaseDeleted(CaseMessage caseMessage);
+    void handleCaseDeleted(CaseInfoEntity caseEntity);
 
     /**
      * 同步案件数据到MongoDB

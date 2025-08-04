@@ -1,14 +1,13 @@
 package com.guanwei.tles.casetransfer.service.impl;
 
-import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.common.exception.BusinessException;
 import com.guanwei.framework.common.result.ResultCode;
 import com.guanwei.framework.common.service.impl.BaseMongoServiceImpl;
-import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import com.guanwei.tles.casetransfer.entity.Case;
 import com.guanwei.tles.casetransfer.entity.CaseDocument;
 import com.guanwei.tles.casetransfer.entity.CaseParty;
 import com.guanwei.tles.casetransfer.entity.oracle.*;
+import com.guanwei.tles.casetransfer.mapper.oracle.CaseMapper;
 import com.guanwei.tles.casetransfer.repository.CaseRepository;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import lombok.RequiredArgsConstructor;
@@ -33,42 +32,37 @@ import java.util.stream.Collectors;
 public class CaseTransferServiceImpl extends BaseMongoServiceImpl<CaseRepository, Case> implements CaseTransferService {
 
     private final CaseRepository caseRepository;
+    private final CaseMapper caseMapper;
 
     @Override
     @Transactional
-    public void handleCaseCreated(CaseMessage caseMessage) {
-        log.info("处理案件新增消息: {}", caseMessage);
+    public void handleCaseCreated(CaseInfoEntity caseEntity) {
+        log.info("处理案件新增消息: {}", caseEntity);
         try {
-            syncCaseToMongoDB(caseMessage.getCaseId());
-            log.info("案件新增处理完成: {}", caseMessage.getCaseId());
+            syncCaseToMongoDB(caseEntity.getCaseId());
+            log.info("案件新增处理完成: {}", caseEntity.getCaseId());
         } catch (Exception e) {
-            log.error("处理案件新增消息失败: {}", caseMessage.getCaseId(), e);
+            log.error("处理案件新增消息失败: {}", caseEntity.getCaseId(), e);
             throw new BusinessException(ResultCode.ERROR.getCode(), "处理案件新增消息失败: " + e.getMessage());
         }
     }
 
     @Override
     @Transactional
-    public void handleCaseUpdated(CaseMessage caseMessage) {
-        log.info("处理案件修改消息: {}", caseMessage);
+    public void handleCaseUpdated(CaseInfoEntity caseEntity) {
         try {
-            syncCaseToMongoDB(caseMessage.getCaseId());
-            log.info("案件修改处理完成: {}", caseMessage.getCaseId());
+            syncCaseToMongoDB(caseEntity.getCaseId());
         } catch (Exception e) {
-            log.error("处理案件修改消息失败: {}", caseMessage.getCaseId(), e);
             throw new BusinessException(ResultCode.ERROR.getCode(), "处理案件修改消息失败: " + e.getMessage());
         }
     }
 
     @Override
     @Transactional
-    public void handleCaseDeleted(CaseMessage caseMessage) {
-        log.info("处理案件删除消息: {}", caseMessage);
+    public void handleCaseDeleted(CaseInfoEntity caseEntity) {
         try {
-            caseRepository.deleteByCaseId(caseMessage.getCaseId());
-            log.info("案件删除处理完成: {}", caseMessage.getCaseId());
+            caseRepository.deleteByCaseId(caseEntity.getCaseId());
         } catch (Exception e) {
-            log.error("处理案件删除消息失败: {}", caseMessage.getCaseId(), e);
             throw new BusinessException(ResultCode.ERROR.getCode(), "处理案件删除消息失败: " + e.getMessage());
         }
     }
@@ -78,72 +72,67 @@ public class CaseTransferServiceImpl extends BaseMongoServiceImpl<CaseRepository
     public void syncCaseToMongoDB(String caseId) {
         log.info("开始同步案件数据到MongoDB: {}", caseId);
 
-        // TODO: 暂时注释掉 Oracle 数据查询，等 MyBatis Plus 配置问题解决后再启用
-        /*
-         * // 1. 从Oracle查询案件主表数据
-         * CaseEntity caseEntity = caseMapper.selectByCaseId(caseId);
-         * if (caseEntity == null) {
-         * log.warn("案件不存在: {}", caseId);
-         * return;
-         * }
-         * 
-         * // 2. 从Oracle查询案件当事人数据
-         * List<CasePartyEntity> partyEntities =
-         * caseMapper.selectPartiesByCaseId(caseId);
-         * 
-         * // 3. 从Oracle查询案件当事单位数据
-         * List<CaseCompanyEntity> companyEntities =
-         * caseMapper.selectCompaniesByCaseId(caseId);
-         * 
-         * // 4. 从Oracle查询案件附件数据
-         * List<CaseDocumentEntity> attachmentEntities =
-         * caseMapper.selectAttachmentsByCaseId(caseId);
-         * 
-         * // 5. 从Oracle查询案件车辆数据
-         * List<CaseVehicleEntity> vehicleEntities =
-         * caseMapper.selectVehiclesByCaseId(caseId);
-         * 
-         * // 6. 从Oracle查询案件处罚数据
-         * List<CasePunishEntity> punishEntities =
-         * caseMapper.selectPunishesByCaseId(caseId);
-         * 
-         * // 7. 从Oracle查询案件执法人员数据
-         * List<CaseOfficerEntity> officerEntities =
-         * caseMapper.selectOfficersByCaseId(caseId);
-         * 
-         * // 8. 转换为MongoDB实体
-         * Case mongoCase = convertToMongoCase(caseEntity, partyEntities,
-         * companyEntities,
-         * attachmentEntities, vehicleEntities, punishEntities, officerEntities);
-         * 
-         * // 9. 保存到MongoDB
-         * caseRepository.save(mongoCase);
-         */
+        try {
+            // 1. 从Oracle查询案件主表数据
+            CaseInfoEntity caseInfoEntity = caseMapper.selectByCaseId(caseId);
+            if (caseInfoEntity == null) {
+                log.warn("案件不存在: {}", caseId);
+                return;
+            }
 
-        log.info("案件数据同步完成: {}", caseId);
+            // 2. 从Oracle查询案件当事人数据
+            List<CasePersonalEntity> personalEntities = caseMapper.selectPartiesByCaseId(caseId);
+
+            // 3. 从Oracle查询案件当事单位数据
+            List<CaseCompanyEntity> companyEntities = caseMapper.selectCompaniesByCaseId(caseId);
+
+            // 4. 从Oracle查询案件附件数据
+//            List<CaseAttachmentEntity> attachmentEntities = caseMapper.selectAttachmentsByCaseId(caseId);
+
+            // 5. 从Oracle查询案件车辆数据
+            List<CaseVehicleEntity> vehicleEntities = caseMapper.selectVehiclesByCaseId(caseId);
+
+            // 6. 从Oracle查询案件处罚数据
+            List<CasePunishEntity> punishEntities = caseMapper.selectPunishesByCaseId(caseId);
+
+            // 7. 从Oracle查询案件执法人员数据
+            List<CaseOfficerEntity> officerEntities = caseMapper.selectOfficersByCaseId(caseId);
+
+            // 8. 转换为MongoDB实体
+            Case mongoCase = convertToMongoCase(caseInfoEntity, personalEntities, companyEntities,
+                    null, vehicleEntities, punishEntities, officerEntities);
+
+            // 9. 保存到MongoDB
+            caseRepository.save(mongoCase);
+
+            log.info("案件数据同步完成: {}", caseId);
+        } catch (Exception e) {
+            log.error("同步案件数据到MongoDB失败: {}", caseId, e);
+            throw new BusinessException(ResultCode.ERROR.getCode(), "同步案件数据到MongoDB失败: " + e.getMessage());
+        }
     }
 
     /**
      * 转换为MongoDB案件实体
      */
-    private Case convertToMongoCase(CaseEntity caseEntity,
-            List<CasePartyEntity> partyEntities,
+    private Case convertToMongoCase(CaseInfoEntity caseInfoEntity,
+            List<CasePersonalEntity> personalEntities,
             List<CaseCompanyEntity> companyEntities,
-            List<CaseDocumentEntity> attachmentEntities,
+            List<CaseAttachmentEntity> attachmentEntities,
             List<CaseVehicleEntity> vehicleEntities,
             List<CasePunishEntity> punishEntities,
             List<CaseOfficerEntity> officerEntities) {
         Case mongoCase = new Case();
 
         // 复制主表数据
-        BeanUtils.copyProperties(caseEntity, mongoCase);
-        mongoCase.setCaseId(caseEntity.getCaseId());
-        mongoCase.setSourceTable("CASE_INFO");
+        BeanUtils.copyProperties(caseInfoEntity, mongoCase);
+        mongoCase.setCaseId(caseInfoEntity.getCaseId());
+        mongoCase.setSourceTable("LE_CaseInfo");
         mongoCase.setLastSyncTime(LocalDateTime.now());
 
         // 转换当事人数据
-        if (partyEntities != null && !partyEntities.isEmpty()) {
-            List<CaseParty> parties = partyEntities.stream()
+        if (personalEntities != null && !personalEntities.isEmpty()) {
+            List<CaseParty> parties = personalEntities.stream()
                     .map(this::convertToMongoParty)
                     .collect(Collectors.toList());
             mongoCase.setParties(parties);
@@ -163,18 +152,18 @@ public class CaseTransferServiceImpl extends BaseMongoServiceImpl<CaseRepository
     /**
      * 转换为MongoDB当事人实体
      */
-    private CaseParty convertToMongoParty(CasePartyEntity partyEntity) {
+    private CaseParty convertToMongoParty(CasePersonalEntity personalEntity) {
         CaseParty party = new CaseParty();
-        BeanUtils.copyProperties(partyEntity, party);
+        BeanUtils.copyProperties(personalEntity, party);
         return party;
     }
 
     /**
      * 转换为MongoDB文件实体
      */
-    private CaseDocument convertToMongoDocument(CaseDocumentEntity documentEntity) {
+    private CaseDocument convertToMongoDocument(CaseAttachmentEntity attachmentEntity) {
         CaseDocument document = new CaseDocument();
-        BeanUtils.copyProperties(documentEntity, document);
+        BeanUtils.copyProperties(attachmentEntity, document);
         return document;
     }
 }

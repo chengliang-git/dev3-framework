@@ -72,6 +72,7 @@ public class MemoryMessageStorage implements MessageStorage {
 
     @Override
     public boolean updateStatus(String id, CapMessage.MessageStatus status) {
+        if (id == null) return true;
         CapMessage message = messageStore.get(id);
         if (message != null) {
             message.setStatus(status);

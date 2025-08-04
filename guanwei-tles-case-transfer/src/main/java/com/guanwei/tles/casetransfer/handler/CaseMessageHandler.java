@@ -2,8 +2,9 @@ package com.guanwei.tles.casetransfer.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
-import com.guanwei.framework.cap.CapSubscriber;
+import com.guanwei.framework.cap.annotation.CapSubscribe;
 import com.guanwei.tles.casetransfer.dto.CaseMessage;
+import com.guanwei.tles.casetransfer.entity.oracle.CaseInfoEntity;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,7 @@ import jakarta.annotation.PostConstruct;
 
 /**
  * 案件消息处理器
- * 支持内存队列和RabbitMQ两种模式
- * 参考 GitHub CAP 源码的队列命名规则：routeKey + "." + groupName
+ * 使用 @CapSubscribe 注解实现订阅，参考 .NET Core CAP 组件的订阅方式
  * 
  * @author Guanwei Framework
  * @since 1.0.0
@@ -27,131 +27,185 @@ import jakarta.annotation.PostConstruct;
 @RequiredArgsConstructor
 public class CaseMessageHandler {
 
-    private final CapSubscriber capSubscriber;
     private final CaseTransferService caseTransferService;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper; // 使用全局配置的ObjectMapper
 
     @Value("${cap.default-group:case-transfer-group}")
     private String messageGroup;
 
-    /**
-     * 案件立案消息主题
-     */
-    private static final String CASE_FILING_TOPIC = "tles.case.filing";
-
-    /**
-     * 案件调查报告消息主题
-     */
-    private static final String CASE_HANDLE_FINAL_REVIEW = "tles.case-handling-opinion.finnal-review";
-
-    /**
-     * 案件违法信息录入消息主题
-     */
-    private static final String CASE_ILLEGAL = "tles.case.case-illegal";
-
-    private static final String CASE_ADMIN_PENALTY_DECISION = "tles.case.admin-penalty-decision";
-
-    private static final String CASE_CLOSED = "tles.case.closed";
-
-    private static final String CASE_CANCELED = "tles.case.case-cancel";
-
-
-
     @PostConstruct
     public void init() {
-        // 订阅案件立案消息
-        capSubscriber.subscribe(CASE_FILING_TOPIC, messageGroup, this::handleCaseTransfer);
-
-        // 订阅案件调查报告消息
-        capSubscriber.subscribe(CASE_HANDLE_FINAL_REVIEW, messageGroup, this::handleCaseTransfer);
-
-        // 订阅案件违法信息录入消息
-        capSubscriber.subscribe(CASE_ILLEGAL, messageGroup, this::handleCaseTransfer);
-
-        //订阅案件行政处罚决定
-        capSubscriber.subscribe(CASE_ADMIN_PENALTY_DECISION, messageGroup, this::handleCaseTransfer);
-
-        // 订阅案件删除消息
-//        capSubscriber.subscribe(CASE_DELETED_TOPIC, messageGroup, this::handleCaseDeleted);
+        log.info("案件消息处理器初始化完成，使用 @CapSubscribe 注解订阅消息");
+        log.info("消息组: {}", messageGroup);
+        log.info("使用全局配置的ObjectMapper，支持LocalDateTime处理");
     }
 
     /**
-     * 处理案件新增消息
+     * 处理案件立案消息
      */
-    public void handleCaseTransfer(CapMessage capMessage) {
+    @CapSubscribe(value = "tles.case.filing", group = "case-transfer-group")
+    public void handleCaseFiling(CapMessage capMessage) {
         try {
-            log.info("收到案件新增消息: {}", capMessage.getId());
+            log.info("收到案件立案消息: {}", capMessage.getId());
 
-            // 解析消息内容
-            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            // 解析消息内容 - 可能是CaseEntity的JSON
+            try {
+                // 首先尝试解析为CaseMessage
+                CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+                caseTransferService.handleCaseCreated(caseEntity);
+            } catch (Exception e) {
+                log.debug("Failed to parse as CaseMessage, trying to parse as CaseEntity: {}", e.getMessage());
 
-            // 调用转存服务
-            caseTransferService.handleCaseCreated(caseMessage);
+                // 如果解析CaseMessage失败，尝试解析为CaseEntity
+                try {
+                    CaseInfoEntity caseEntity = objectMapper.readValue(
+                            capMessage.getContent(), CaseInfoEntity.class);
 
-            log.info("案件新增消息处理完成: {}", capMessage.getId());
+                    caseTransferService.handleCaseCreated(caseEntity);
+                } catch (Exception caseEntityException) {
+                    log.error("Failed to parse message content as either CaseMessage or CaseEntity",
+                            caseEntityException);
+                    throw new RuntimeException("Failed to parse message content", caseEntityException);
+                }
+            }
+
+            log.info("案件立案消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件新增消息失败: {}", capMessage.getId(), e);
-            throw new RuntimeException("处理案件新增消息失败", e);
+            log.error("处理案件立案消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件立案消息失败", e);
         }
     }
 
     /**
-     * 处理案件修改消息
+     * 处理案件调查报告消息
      */
-    public void handleCaseUpdated(CapMessage capMessage) {
+    @CapSubscribe(value = "tles.case-handling-opinion.finnal-review", group = "case-transfer-group")
+    public void handleCaseHandleFinalReview(CapMessage capMessage) {
         try {
-            log.info("收到案件修改消息: {}", capMessage.getId());
-
             // 解析消息内容
-            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
 
             // 调用转存服务
-            caseTransferService.handleCaseUpdated(caseMessage);
+            caseTransferService.handleCaseUpdated(caseEntity);
 
-            log.info("案件修改消息处理完成: {}", capMessage.getId());
+            log.info("案件调查报告消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件修改消息失败: {}", capMessage.getId(), e);
-            throw new RuntimeException("处理案件修改消息失败", e);
+            log.error("处理案件调查报告消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件调查报告消息失败", e);
         }
     }
 
     /**
-     * 处理案件删除消息
+     * 处理案件违法信息录入消息
      */
-    public void handleCaseDeleted(CapMessage capMessage) {
+    @CapSubscribe(value = "tles.case.case-illegal", group = "case-transfer-group")
+    public void handleCaseIllegal(CapMessage capMessage) {
         try {
-            log.info("收到案件删除消息: {}", capMessage.getId());
+            log.info("收到案件违法信息录入消息: {}", capMessage.getId());
+            log.info("CapMessage详情: id={}, name={}, group={}, content={}", 
+                    capMessage.getId(), capMessage.getName(), capMessage.getGroup(), capMessage.getContent());
 
             // 解析消息内容
-            CaseMessage caseMessage = objectMapper.readValue(capMessage.getContent(), CaseMessage.class);
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+            log.info("成功解析CaseEntity: caseId={}, caseNo={}, partyName={}", 
+                    caseEntity.getCaseId(), caseEntity.getCaseNo(), caseEntity.getPartyName());
 
-            // 调用转存服务
-            caseTransferService.handleCaseDeleted(caseMessage);
+            // 直接调用同步方法，将案件数据同步到MongoDB
+            caseTransferService.syncCaseToMongoDB(caseEntity.getCaseId());
 
-            log.info("案件删除消息处理完成: {}", capMessage.getId());
+            log.info("案件违法信息录入消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
-            log.error("处理案件删除消息失败: {}", capMessage.getId(), e);
-            throw new RuntimeException("处理案件删除消息失败", e);
+            log.error("处理案件违法信息录入消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件违法信息录入消息失败", e);
         }
     }
 
     /**
-     * RabbitMQ监听器 - 案件新增
+     * 处理案件行政处罚决定消息
+     */
+    @CapSubscribe(value = "tles.case.admin-penalty-decision", group = "case-transfer-group")
+    public void handleCaseAdminPenaltyDecision(CapMessage capMessage) {
+        try {
+            // 解析消息内容
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+
+            // 调用转存服务
+            caseTransferService.handleCaseUpdated(caseEntity);
+        } catch (Exception e) {
+            throw new RuntimeException("处理案件行政处罚决定消息失败", e);
+        }
+    }
+
+    /**
+     * 处理案件结案消息
+     */
+    @CapSubscribe(value = "tles.case.closed", group = "case-transfer-group")
+    public void handleCaseClosed(CapMessage capMessage) {
+        try {
+            // 解析消息内容
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+
+            // 调用转存服务
+            caseTransferService.handleCaseUpdated(caseEntity);
+        } catch (Exception e) {
+            throw new RuntimeException("处理案件结案消息失败", e);
+        }
+    }
+
+    /**
+     * 处理案件撤销消息
+     */
+    @CapSubscribe(value = "tles.case.case-cancel", group = "case-transfer-group")
+    public void handleCaseCanceled(CapMessage capMessage) {
+        try {
+            log.info("收到案件撤销消息: {}", capMessage.getId());
+
+            // 解析消息内容
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+
+            // 调用转存服务
+            caseTransferService.handleCaseDeleted(caseEntity);
+
+            log.info("案件撤销消息处理完成: {}", capMessage.getId());
+        } catch (Exception e) {
+            log.error("处理案件撤销消息失败: {}", capMessage.getId(), e);
+            throw new RuntimeException("处理案件撤销消息失败", e);
+        }
+    }
+
+    /**
+     * RabbitMQ监听器 - 案件立案（备用方案）
      * 队列名：tles.case.filing.case-transfer-group
      */
     @RabbitListener(queues = "#{caseFilingQueue.name}")
-    public void handleCaseCreatedRabbitMQ(Message message) {
+    public void handleCaseFilingRabbitMQ(Message message) {
         try {
             String messageBody = new String(message.getBody());
-            log.debug("RabbitMQ收到案件新增消息: {}", messageBody);
+            log.debug("RabbitMQ收到案件立案消息: {}", messageBody);
 
             CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
 
-            if (CASE_FILING_TOPIC.equals(capMessage.getName())) {
-                handleCaseTransfer(capMessage);
+            if ("tles.case.filing".equals(capMessage.getName())) {
+                handleCaseFiling(capMessage);
             }
         } catch (Exception e) {
-            log.error("RabbitMQ处理案件传输消息失败", e);
+            log.error("RabbitMQ处理案件立案消息失败", e);
         }
+    }
+
+    /**
+     * 将CaseEntity转换为CaseMessage
+     */
+    private CaseMessage convertCaseEntityToCaseMessage(
+            CaseInfoEntity caseEntity) {
+        CaseMessage caseMessage = new CaseMessage();
+        caseMessage.setCaseId(caseEntity.getCaseId());
+        caseMessage.setOperationType("CREATE"); // 默认为新增操作
+        caseMessage.setTimestamp(System.currentTimeMillis());
+        caseMessage.setSource("tles.case.filing");
+        caseMessage.setDescription("案件立案消息 - " + caseEntity.getCaseNo());
+
+        log.info("Converted CaseEntity to CaseMessage: caseId={}", caseEntity.getCaseId());
+        return caseMessage;
     }
 }
