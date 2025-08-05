@@ -35,10 +35,10 @@ public class MemoryMessageQueue implements MessageQueue {
         try {
             BlockingQueue<CapMessage> queue = getOrCreateQueue(queueName);
             if (message.getId() == null) {
-                message.setId(generateMessageId());
+                message.setDbId(generateMessageId());
             }
-            if (message.getCreatedAt() == null) {
-                message.setCreatedAt(LocalDateTime.now());
+            if (message.getAdded() == null) {
+                message.setAdded(LocalDateTime.now());
             }
 
             boolean result = queue.offer(message);
@@ -60,10 +60,10 @@ public class MemoryMessageQueue implements MessageQueue {
         try {
             BlockingQueue<CapMessage> delayQueue = getOrCreateDelayQueue(queueName);
             if (message.getId() == null) {
-                message.setId(generateMessageId());
+                message.setDbId(generateMessageId());
             }
-            if (message.getCreatedAt() == null) {
-                message.setCreatedAt(LocalDateTime.now());
+            if (message.getAdded() == null) {
+                message.setAdded(LocalDateTime.now());
             }
 
             // 设置过期时间

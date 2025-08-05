@@ -1,146 +1,388 @@
 package com.guanwei.framework.cap.storage;
 
 import com.guanwei.framework.cap.CapMessage;
+import com.guanwei.framework.cap.CapMessageStatus;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
  * 内存消息存储实现
- * 用于开发和测试环境，生产环境建议使用数据库存储
+ * 完整实现，用于开发和测试环境，生产环境建议使用数据库存储
  */
 @Slf4j
 public class MemoryMessageStorage implements MessageStorage {
 
-    private final Map<String, CapMessage> messageStore = new ConcurrentHashMap<>();
+    private final Map<String, CapMessage> publishedMessages = new ConcurrentHashMap<>();
+    private final Map<String, CapMessage> receivedMessages = new ConcurrentHashMap<>();
+    private final Map<String, LockInfo> locks = new ConcurrentHashMap<>();
     private final AtomicLong messageIdCounter = new AtomicLong(0);
 
     @Override
-    public boolean store(CapMessage message) {
-        try {
-            if (message.getId() == null) {
-                message.setId(generateMessageId());
+    public CompletableFuture<Boolean> acquireLockAsync(String key, Duration ttl, String instance) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                LockInfo existingLock = locks.get(key);
+                if (existingLock != null && existingLock.isValid()) {
+                    return false; // 锁已被其他实例持有
+                }
+
+                LockInfo newLock = new LockInfo(instance, LocalDateTime.now().plus(ttl));
+                locks.put(key, newLock);
+                log.debug("Acquired lock: {} by instance: {}", key, instance);
+                return true;
+            } catch (Exception e) {
+                log.error("Error acquiring lock: {}", key, e);
+                return false;
             }
-            if (message.getCreatedAt() == null) {
-                message.setCreatedAt(LocalDateTime.now());
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> releaseLockAsync(String key, String instance) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                LockInfo lock = locks.get(key);
+                if (lock != null && instance.equals(lock.getInstance())) {
+                    locks.remove(key);
+                    log.debug("Released lock: {} by instance: {}", key, instance);
+                }
+            } catch (Exception e) {
+                log.error("Error releasing lock: {}", key, e);
             }
-            message.setUpdatedAt(LocalDateTime.now());
-
-            messageStore.put(message.getId(), message);
-            log.debug("Stored message: {}", message.getId());
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to store message: {}", message, e);
-            return false;
-        }
+        });
     }
 
     @Override
-    public int storeBatch(List<CapMessage> messages) {
-        int successCount = 0;
-        for (CapMessage message : messages) {
-            if (store(message)) {
-                successCount++;
+    public CompletableFuture<Void> renewLockAsync(String key, Duration ttl, String instance) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                LockInfo lock = locks.get(key);
+                if (lock != null && instance.equals(lock.getInstance())) {
+                    lock.setExpiresAt(LocalDateTime.now().plus(ttl));
+                    log.debug("Renewed lock: {} by instance: {}", key, instance);
+                }
+            } catch (Exception e) {
+                log.error("Error renewing lock: {}", key, e);
             }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> changePublishStateToDelayedAsync(List<String> ids) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                for (String id : ids) {
+                    CapMessage message = publishedMessages.get(id);
+                    if (message != null) {
+                        message.setStatus(CapMessageStatus.DELAYED);
+                        log.debug("Changed publish state to delayed: {}", id);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error changing publish state to delayed", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> changePublishStateAsync(CapMessage message, CapMessageStatus status, Object transaction) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                if (message != null && message.getId() != null) {
+                    CapMessage storedMessage = publishedMessages.get(message.getId());
+                    if (storedMessage != null) {
+                        storedMessage.setStatus(status);
+                        log.debug("Changed publish state: {} -> {}", message.getId(), status);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error changing publish state", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> changeReceiveStateAsync(CapMessage message, CapMessageStatus status) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                if (message != null && message.getId() != null) {
+                    CapMessage storedMessage = receivedMessages.get(message.getId());
+                    if (storedMessage != null) {
+                        storedMessage.setStatus(status);
+                        log.debug("Changed receive state: {} -> {}", message.getId(), status);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error changing receive state", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String id = generateMessageId();
+                CapMessage message = new CapMessage(name, content);
+                message.setDbId(id);
+                message.setStatus(CapMessageStatus.SCHEDULED);
+                message.setAdded(LocalDateTime.now());
+                message.setRetries(0);
+                
+                publishedMessages.put(id, message);
+                log.debug("Stored published message: {}", id);
+                return message;
+            } catch (Exception e) {
+                log.error("Error storing published message", e);
+                throw new RuntimeException("Failed to store published message", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> storeReceivedExceptionMessageAsync(String name, String group, String content) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                String id = generateMessageId();
+                CapMessage exceptionMessage = new CapMessage(name, group, content);
+                exceptionMessage.setDbId(id);
+                exceptionMessage.setStatus(CapMessageStatus.FAILED);
+                exceptionMessage.setAdded(LocalDateTime.now());
+                
+                receivedMessages.put(id, exceptionMessage);
+                log.debug("Stored exception message: {}", id);
+            } catch (Exception e) {
+                log.error("Error storing exception message", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<CapMessage> storeReceivedMessageAsync(String name, String group, Object content) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String id = generateMessageId();
+                CapMessage message = new CapMessage(name, group, content);
+                message.setDbId(id);
+                message.setStatus(CapMessageStatus.SCHEDULED);
+                message.setAdded(LocalDateTime.now());
+                message.setRetries(0);
+                
+                receivedMessages.put(id, message);
+                log.debug("Stored received message: {}", id);
+                return message;
+            } catch (Exception e) {
+                log.error("Error storing received message", e);
+                throw new RuntimeException("Failed to store received message", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> deleteExpiresAsync(String table, LocalDateTime timeout, int batchCount) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Map<String, CapMessage> messageMap = "published".equals(table) ? publishedMessages : receivedMessages;
+                return deleteExpiredMessages(messageMap, timeout, batchCount);
+            } catch (Exception e) {
+                log.error("Error deleting expired messages", e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getPublishedMessagesOfNeedRetry(Duration lookbackSeconds) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                LocalDateTime cutoff = LocalDateTime.now().minus(lookbackSeconds);
+                return publishedMessages.values().stream()
+                    .filter(message -> message.getStatus() == CapMessageStatus.FAILED)
+                    .filter(message -> message.getAdded() != null && message.getAdded().isAfter(cutoff))
+                    .collect(Collectors.toList());
+            } catch (Exception e) {
+                log.error("Error getting published messages of need retry", e);
+                return new java.util.ArrayList<>();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getReceivedMessagesOfNeedRetry(Duration lookbackSeconds) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                LocalDateTime cutoff = LocalDateTime.now().minus(lookbackSeconds);
+                return receivedMessages.values().stream()
+                    .filter(message -> message.getStatus() == CapMessageStatus.FAILED)
+                    .filter(message -> message.getAdded() != null && message.getAdded().isAfter(cutoff))
+                    .collect(Collectors.toList());
+            } catch (Exception e) {
+                log.error("Error getting received messages of need retry", e);
+                return new java.util.ArrayList<>();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> deleteReceivedMessageAsync(String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                CapMessage removed = receivedMessages.remove(id);
+                log.debug("Deleted received message: {}, result: {}", id, removed != null);
+                return removed != null ? 1 : 0;
+            } catch (Exception e) {
+                log.error("Error deleting received message: {}", id, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> deletePublishedMessageAsync(String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                CapMessage removed = publishedMessages.remove(id);
+                log.debug("Deleted published message: {}, result: {}", id, removed != null);
+                return removed != null ? 1 : 0;
+            } catch (Exception e) {
+                log.error("Error deleting published message: {}", id, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> scheduleMessagesOfDelayedAsync(DelayedMessageScheduler scheduleTask) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                List<CapMessage> delayedMessages = publishedMessages.values().stream()
+                    .filter(message -> message.getStatus() == CapMessageStatus.DELAYED)
+                    .filter(message -> message.getExpiresAt() != null && 
+                                     message.getExpiresAt().isBefore(LocalDateTime.now()))
+                    .collect(Collectors.toList());
+                
+                if (!delayedMessages.isEmpty()) {
+                    scheduleTask.schedule(null, delayedMessages);
+                    log.debug("Scheduled {} delayed messages", delayedMessages.size());
+                }
+            } catch (Exception e) {
+                log.error("Error scheduling delayed messages", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> deleteExpiredMessagesAsync(CapMessageStatus status, long expiredBefore) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                LocalDateTime expiredTime = LocalDateTime.ofEpochSecond(expiredBefore, 0, java.time.ZoneOffset.UTC);
+                int deletedCount = 0;
+                
+                // 删除已发布消息中指定状态且过期的消息
+                deletedCount += publishedMessages.entrySet().removeIf(entry -> {
+                    CapMessage message = entry.getValue();
+                    return message.getStatus() == status && 
+                           message.getExpiresAt() != null && 
+                           message.getExpiresAt().isBefore(expiredTime);
+                }) ? 1 : 0;
+                
+                // 删除已接收消息中指定状态且过期的消息
+                deletedCount += receivedMessages.entrySet().removeIf(entry -> {
+                    CapMessage message = entry.getValue();
+                    return message.getStatus() == status && 
+                           message.getExpiresAt() != null && 
+                           message.getExpiresAt().isBefore(expiredTime);
+                }) ? 1 : 0;
+                
+                log.debug("Deleted {} expired messages with status: {}", deletedCount, status);
+                return deletedCount;
+            } catch (Exception e) {
+                log.error("Error deleting expired messages", e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> updateStatusAsync(String messageId, CapMessageStatus status) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                // 尝试更新已发布消息
+                CapMessage publishedMessage = publishedMessages.get(messageId);
+                if (publishedMessage != null) {
+                    publishedMessage.setStatus(status);
+                    log.debug("Updated published message status: {} -> {}", messageId, status);
+                    return;
+                }
+                
+                // 尝试更新已接收消息
+                CapMessage receivedMessage = receivedMessages.get(messageId);
+                if (receivedMessage != null) {
+                    receivedMessage.setStatus(status);
+                    log.debug("Updated received message status: {} -> {}", messageId, status);
+                }
+            } catch (Exception e) {
+                log.error("Error updating message status: {}", messageId, e);
+            }
+        });
+    }
+
+    private int deleteExpiredMessages(Map<String, CapMessage> messageMap, LocalDateTime timeout, int batchCount) {
+        int deletedCount = 0;
+        int processedCount = 0;
+        
+        for (Map.Entry<String, CapMessage> entry : messageMap.entrySet()) {
+            if (processedCount >= batchCount) {
+                break;
+            }
+            
+            CapMessage message = entry.getValue();
+            if (message.getAdded() != null && message.getAdded().isBefore(timeout)) {
+                messageMap.remove(entry.getKey());
+                deletedCount++;
+            }
+            processedCount++;
         }
-        log.debug("Batch stored {} messages, success: {}", messages.size(), successCount);
-        return successCount;
+        
+        log.debug("Deleted {} expired messages from memory storage", deletedCount);
+        return deletedCount;
     }
 
-    @Override
-    public Optional<CapMessage> getById(String id) {
-        return Optional.ofNullable(messageStore.get(id));
-    }
-
-    @Override
-    public List<CapMessage> getPendingMessages(String name, String group, int limit) {
-        return messageStore.values().stream()
-                .filter(message -> name.equals(message.getName()) &&
-                        group.equals(message.getGroup()) &&
-                        message.getStatus() == CapMessage.MessageStatus.PENDING)
-                .limit(limit)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean updateStatus(String id, CapMessage.MessageStatus status) {
-        if (id == null) return true;
-        CapMessage message = messageStore.get(id);
-        if (message != null) {
-            message.setStatus(status);
-            message.setUpdatedAt(LocalDateTime.now());
-            log.debug("Updated message status: {} -> {}", id, status);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean incrementRetries(String id) {
-        CapMessage message = messageStore.get(id);
-        if (message != null) {
-            message.setRetries(message.getRetries() == null ? 1 : message.getRetries() + 1);
-            message.setUpdatedAt(LocalDateTime.now());
-            log.debug("Incremented retries for message: {} -> {}", id, message.getRetries());
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public int deleteExpiredMessages(long expiredTime) {
-        LocalDateTime expiredDateTime = LocalDateTime.now().minusSeconds(expiredTime);
-        List<String> expiredIds = messageStore.values().stream()
-                .filter(message -> message.getCreatedAt() != null &&
-                        message.getCreatedAt().isBefore(expiredDateTime))
-                .map(CapMessage::getId)
-                .collect(Collectors.toList());
-
-        expiredIds.forEach(messageStore::remove);
-        log.debug("Deleted {} expired messages", expiredIds.size());
-        return expiredIds.size();
-    }
-
-    @Override
-    public boolean delete(String id) {
-        CapMessage removed = messageStore.remove(id);
-        if (removed != null) {
-            log.debug("Deleted message: {}", id);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public long getFailedMessageCount(String name, String group) {
-        return messageStore.values().stream()
-                .filter(message -> name.equals(message.getName()) &&
-                        group.equals(message.getGroup()) &&
-                        message.getStatus() == CapMessage.MessageStatus.FAILED)
-                .count();
-    }
-
-    @Override
-    public long getPendingMessageCount(String name, String group) {
-        return messageStore.values().stream()
-                .filter(message -> name.equals(message.getName()) &&
-                        group.equals(message.getGroup()) &&
-                        message.getStatus() == CapMessage.MessageStatus.PENDING)
-                .count();
-    }
-
-    /**
-     * 生成消息ID
-     */
     private String generateMessageId() {
         return "msg_" + System.currentTimeMillis() + "_" + messageIdCounter.incrementAndGet();
+    }
+
+    private static class LockInfo {
+        private final String instance;
+        private LocalDateTime expiresAt;
+
+        public LockInfo(String instance, LocalDateTime expiresAt) {
+            this.instance = instance;
+            this.expiresAt = expiresAt;
+        }
+
+        public String getInstance() {
+            return instance;
+        }
+
+        public LocalDateTime getExpiresAt() {
+            return expiresAt;
+        }
+
+        public void setExpiresAt(LocalDateTime expiresAt) {
+            this.expiresAt = expiresAt;
+        }
+
+        public boolean isValid() {
+            return expiresAt != null && LocalDateTime.now().isBefore(expiresAt);
+        }
     }
 }

@@ -115,6 +115,11 @@ public abstract class BaseMongoServiceImpl<R extends BaseMongoRepository<T>, T e
 
     @Override
     public Integer getNextOrderNo() {
-        return baseMongoRepository.getNextOrderNo();
+        Optional<T> topEntity = baseMongoRepository.findTopByOrderByOrderNoDesc();
+        if (topEntity.isPresent()) {
+            Integer currentMaxOrderNo = topEntity.get().getOrderNo();
+            return currentMaxOrderNo != null ? currentMaxOrderNo + 1 : 1;
+        }
+        return 1;
     }
 }

@@ -164,4 +164,14 @@ public interface MessageStorage {
          */
         CompletableFuture<Void> schedule(Object transaction, List<CapMessage> messages);
     }
+
+    /**
+     * 更新消息状态（通用）
+     */
+    CompletableFuture<Void> updateStatusAsync(String messageId, CapMessageStatus status);
+
+    /**
+     * 删除指定状态的过期消息
+     */
+    CompletableFuture<Integer> deleteExpiredMessagesAsync(CapMessageStatus status, long expiredBefore);
 }

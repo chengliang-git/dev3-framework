@@ -40,6 +40,8 @@ public class CapAutoConfiguration {
                 return new com.guanwei.framework.cap.storage.MemoryMessageStorage();
             case "redis":
                 return new com.guanwei.framework.cap.storage.RedisMessageStorage();
+            case "oracle":
+                return new com.guanwei.framework.cap.storage.OracleMessageStorage();
             default:
                 log.warn("Unknown storage type: {}, using memory storage", storageType);
                 return new com.guanwei.framework.cap.storage.MemoryMessageStorage();

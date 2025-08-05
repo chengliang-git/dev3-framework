@@ -1,7 +1,6 @@
 package com.guanwei.tles.casetransfer.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapPublisher;
 import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * CAP 消息测试控制器

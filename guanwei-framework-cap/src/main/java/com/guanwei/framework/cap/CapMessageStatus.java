@@ -8,41 +8,51 @@ public enum CapMessageStatus {
     /**
      * 失败状态
      */
-    FAILED(-1),
+    FAILED("Failed"),
 
     /**
      * 已调度状态
      */
-    SCHEDULED(0),
+    SCHEDULED("Scheduled"),
 
     /**
      * 成功状态
      */
-    SUCCEEDED(1),
+    SUCCEEDED("Succeeded"),
 
     /**
      * 延迟状态
      */
-    DELAYED(2),
+    DELAYED("Delayed"),
 
     /**
      * 队列中状态
      */
-    QUEUED(3);
+    QUEUED("Queued"),
 
-    private final int value;
+    /**
+     * 重试中状态
+     */
+    RETRYING("Retrying"),
 
-    CapMessageStatus(int value) {
+    /**
+     * 待处理状态
+     */
+    PENDING("Pending");
+
+    private final String value;
+
+    CapMessageStatus(String value) {
         this.value = value;
     }
 
-    public int getValue() {
+    public String getValue() {
         return value;
     }
 
-    public static CapMessageStatus fromValue(int value) {
+    public static CapMessageStatus fromValue(String value) {
         for (CapMessageStatus status : values()) {
-            if (status.value == value) {
+            if (status.value.equals(value)) {
                 return status;
             }
         }

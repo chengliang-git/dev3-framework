@@ -1,21 +1,12 @@
 package com.guanwei.framework.cap.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapSubscriber;
 import com.guanwei.framework.cap.queue.CapQueueManager;
 import com.guanwei.framework.cap.queue.MessageQueue;
-import com.guanwei.framework.cap.queue.RabbitMQMessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Message;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
@@ -24,6 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
+import com.guanwei.framework.cap.CapMessageStatus;
 
 /**
  * CAP 订阅者实现类
@@ -36,10 +28,8 @@ public class CapSubscriberImpl implements CapSubscriber {
     private final MessageStorage messageStorage;
     private final MessageQueue messageQueue;
     private final CapProperties capProperties;
-    private final RabbitMQMessageQueue rabbitMQMessageQueue;
     private final CapQueueManager capQueueManager;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Consumer<CapMessage>> handlers = new ConcurrentHashMap<>();
     private final Map<String, CapSubscriber.MessageHandler<?>> typedHandlers = new ConcurrentHashMap<>();
     private ExecutorService consumerExecutor;
@@ -51,7 +41,6 @@ public class CapSubscriberImpl implements CapSubscriber {
         this.messageStorage = messageStorage;
         this.messageQueue = messageQueue;
         this.capProperties = capProperties;
-        this.rabbitMQMessageQueue = null;
         this.capQueueManager = null;
         
         // 初始化默认线程池，在@PostConstruct中重新配置
@@ -80,7 +69,7 @@ public class CapSubscriberImpl implements CapSubscriber {
                 }
 
                 // 创建新的线程池
-                int consumerThreads = capProperties.getMessageQueue().getConsumerThreads();
+                int consumerThreads = capProperties.getConsumerThreadCount();
                 consumerExecutor = new ThreadPoolExecutor(
                         consumerThreads,
                         consumerThreads,
@@ -90,7 +79,7 @@ public class CapSubscriberImpl implements CapSubscriber {
                         new ThreadPoolExecutor.CallerRunsPolicy());
 
                 // 启动消息消费调度器
-                long pollInterval = capProperties.getMessageQueue().getPollInterval();
+                long pollInterval = 1000; // 可根据需要改为capProperties.getCollectorCleaningInterval()或自定义字段
                 scheduler.scheduleWithFixedDelay(
                         this::consumeMessages,
                         0,
@@ -98,7 +87,7 @@ public class CapSubscriberImpl implements CapSubscriber {
                         TimeUnit.MILLISECONDS);
 
                 // 启动清理过期消息的调度器
-                long cleanupInterval = capProperties.getStorage().getCleanupInterval();
+                long cleanupInterval = capProperties.getCollectorCleaningInterval();
                 scheduler.scheduleWithFixedDelay(
                         this::cleanupExpiredMessages,
                         cleanupInterval,
@@ -157,7 +146,7 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     @Override
     public void subscribe(String name, Consumer<CapMessage> handler) {
-        subscribe(name, capProperties != null ? capProperties.getDefaultGroup() : "default", handler);
+        subscribe(name, capProperties != null ? capProperties.getDefaultGroupName() : "default", handler);
     }
 
     @Override
@@ -173,7 +162,7 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     @Override
     public <T> void subscribe(String name, CapSubscriber.MessageHandler<T> handler) {
-        subscribe(name, capProperties != null ? capProperties.getDefaultGroup() : "default", handler);
+        subscribe(name, capProperties != null ? capProperties.getDefaultGroupName() : "default", handler);
     }
 
     @Override
@@ -189,7 +178,7 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     @Override
     public void unsubscribe(String name) {
-        unsubscribe(name, capProperties != null ? capProperties.getDefaultGroup() : "default");
+        unsubscribe(name, capProperties != null ? capProperties.getDefaultGroupName() : "default");
     }
 
     @Override
@@ -257,7 +246,7 @@ public class CapSubscriberImpl implements CapSubscriber {
         String queueName = buildQueueName(name, group);
 
         try {
-            int batchSize = capProperties != null ? capProperties.getMessageQueue().getBatchSize() : 100;
+            int batchSize = capProperties.getSchedulerBatchSize();
             List<CapMessage> messages = messageQueue.receiveBatch(
                     queueName,
                     batchSize,
@@ -280,7 +269,7 @@ public class CapSubscriberImpl implements CapSubscriber {
         String queueName = buildQueueName(name, group);
 
         try {
-            int batchSize = capProperties != null ? capProperties.getMessageQueue().getBatchSize() : 100;
+            int batchSize = capProperties.getSchedulerBatchSize();
             List<CapMessage> messages = messageQueue.receiveBatch(
                     queueName,
                     batchSize,
@@ -314,13 +303,13 @@ public class CapSubscriberImpl implements CapSubscriber {
         consumerExecutor.submit(() -> {
             try {
                 // 更新消息状态为重试中
-                messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.RETRYING);
+                messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.RETRYING);
 
                 // 执行处理器
                 handler.accept(message);
 
                 // 更新消息状态为成功
-                messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.SUCCEEDED);
+                messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.SUCCEEDED);
                 messageQueue.acknowledge(queueName, message.getId());
 
                 log.debug("Successfully processed message: {}", message.getId());
@@ -352,13 +341,13 @@ public class CapSubscriberImpl implements CapSubscriber {
         consumerExecutor.submit(() -> {
             try {
                 // 更新消息状态为重试中
-                messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.RETRYING);
+                messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.RETRYING);
 
                 // 执行处理器
                 Object result = handler.handle(message);
 
                 // 更新消息状态为成功
-                messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.SUCCEEDED);
+                messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.SUCCEEDED);
                 messageQueue.acknowledge(queueName, message.getId());
 
                 log.debug("Successfully processed typed message: {} -> {}", message.getId(), result);
@@ -374,20 +363,21 @@ public class CapSubscriberImpl implements CapSubscriber {
      */
     private void handleMessageError(CapMessage message, String queueName) {
         // 增加重试次数
-        messageStorage.incrementRetries(message.getId());
+        message.incrementRetries();
 
         // 检查是否超过最大重试次数
-        if (message.getRetries() != null && message.getRetries() >= message.getMaxRetries()) {
+        Integer retries = message.getRetries();
+        if (retries != null && retries >= capProperties.getFailedRetryCount()) {
             // 超过最大重试次数，标记为失败
-            messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.FAILED);
+            messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.FAILED);
             messageQueue.reject(queueName, message.getId(), false);
-            log.error("Message {} exceeded max retries ({})", message.getId(), message.getMaxRetries());
+            log.error("Message {} exceeded max retries ({})", message.getId(), capProperties.getFailedRetryCount());
         } else {
             // 重新入队重试
-            messageStorage.updateStatus(message.getId(), CapMessage.MessageStatus.PENDING);
+            messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.PENDING);
             messageQueue.reject(queueName, message.getId(), true);
             log.warn("Message {} will be retried (attempt {}/{})",
-                    message.getId(), message.getRetries(), message.getMaxRetries());
+                    message.getId(), message.getRetries(), capProperties.getFailedRetryCount());
         }
     }
 
@@ -397,10 +387,15 @@ public class CapSubscriberImpl implements CapSubscriber {
     private void cleanupExpiredMessages() {
         try {
             if (capProperties != null) {
-                int deletedCount = messageStorage.deleteExpiredMessages(
-                        capProperties.getStorage().getMessageExpired());
-                if (deletedCount > 0) {
-                    log.info("Cleaned up {} expired messages", deletedCount);
+                long expired = capProperties.getSucceedMessageExpiredAfter();
+                int deleted = 0;
+                try {
+                    deleted = messageStorage.deleteExpiredMessagesAsync(CapMessageStatus.SUCCEEDED, expired).get();
+                } catch (Exception e) {
+                    log.error("Failed to delete expired messages", e);
+                }
+                if (deleted > 0) {
+                    log.info("Cleaned up {} expired messages", deleted);
                 }
             }
         } catch (Exception e) {

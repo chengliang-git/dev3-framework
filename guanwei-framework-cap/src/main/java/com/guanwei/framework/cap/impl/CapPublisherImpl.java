@@ -2,6 +2,7 @@ package com.guanwei.framework.cap.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
+import com.guanwei.framework.cap.CapMessageStatus;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapPublisher;
 import com.guanwei.framework.cap.CapTransaction;
@@ -43,7 +44,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publish(String name, Object content) {
-        return publish(name, content, capProperties != null ? capProperties.getDefaultGroup() : "default");
+        return publish(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default");
     }
 
     @Override
@@ -58,7 +59,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publish(String name, Object content, Map<String, String> headers) {
-        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroup() : "default",
+        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, false);
     }
 
@@ -95,7 +96,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publishDelay(String name, Object content, long delaySeconds) {
-        return publishDelay(name, content, capProperties != null ? capProperties.getDefaultGroup() : "default",
+        return publishDelay(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 delaySeconds);
     }
 
@@ -111,7 +112,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publishDelay(String name, Object content, Map<String, String> headers, long delaySeconds) {
-        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroup() : "default",
+        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, false, delaySeconds);
     }
 
@@ -151,7 +152,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publishTransactional(String name, Object content) {
-        return publishTransactional(name, content, capProperties != null ? capProperties.getDefaultGroup() : "default");
+        return publishTransactional(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default");
     }
 
     @Override
@@ -166,7 +167,7 @@ public class CapPublisherImpl implements CapPublisher {
 
     @Override
     public String publishTransactional(String name, Object content, Map<String, String> headers) {
-        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroup() : "default",
+        return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, true);
     }
 
@@ -220,37 +221,24 @@ public class CapPublisherImpl implements CapPublisher {
             // 生成消息ID
             String messageId = UUID.randomUUID().toString();
 
-            // 构建CAP消息
-            CapMessage.CapMessageBuilder builder = CapMessage.builder()
-                    .id(messageId)
-                    .name(name)
-                    .content(objectMapper.writeValueAsString(content))
-                    .group(group)
-                    .status(CapMessage.MessageStatus.PENDING)
-                    .retries(0)
-                    .maxRetries(capProperties != null ? capProperties.getRetry().getMaxRetries() : 3)
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .sentTime(LocalDateTime.now())
-                    .callbackName(callbackName)
-                    .messageType(transactional ? CapMessage.MessageType.TRANSACTIONAL
-                            : delaySeconds != null ? CapMessage.MessageType.DELAY : CapMessage.MessageType.NORMAL);
+            // 创建CAP消息
+            CapMessage capMessage = new CapMessage(name, content);
+            capMessage.setDbId(messageId);
+            capMessage.setGroup(group);
+            capMessage.setStatus(CapMessageStatus.SCHEDULED);
+            capMessage.setRetries(0);
+            capMessage.setAdded(LocalDateTime.now());
+            capMessage.setVersion("v1");
 
             // 设置延迟时间
             if (delaySeconds != null) {
-                builder.expiresAt(LocalDateTime.now().plusSeconds(delaySeconds))
-                        .delayTime(delaySeconds);
+                capMessage.setExpiresAt(LocalDateTime.now().plusSeconds(delaySeconds));
             }
 
             // 设置消息头
             if (headers != null) {
-                builder.headers(new HashMap<>(headers));
+                capMessage.setHeaders(new HashMap<>(headers));
             }
-
-            CapMessage capMessage = builder.build();
-
-            // 初始化消息头
-            capMessage.initializeHeaders();
 
             // 构建队列名称：routeKey + "." + groupName
             String queueName = buildQueueName(name, group);
@@ -258,17 +246,25 @@ public class CapPublisherImpl implements CapPublisher {
             // 如果是事务性消息，检查是否有活动的事务
             if (transactional && transactionManager != null && transactionManager.hasActiveTransaction()) {
                 // 在事务中存储消息，但不立即发送
-                boolean stored = messageStorage.store(capMessage);
-                if (!stored) {
-                    throw new RuntimeException("Failed to store transactional message");
+                try {
+                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, content, null).get();
+                    if (storedMessage == null) {
+                        throw new RuntimeException("Failed to store transactional message");
+                    }
+                    log.info("Stored transactional message: {} in current transaction", messageId);
+                    return messageId;
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to store transactional message", e);
                 }
-                log.info("Stored transactional message: {} in current transaction", messageId);
-                return messageId;
             } else {
                 // 存储消息
-                boolean stored = messageStorage.store(capMessage);
-                if (!stored) {
-                    throw new RuntimeException("Failed to store message");
+                try {
+                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, content, null).get();
+                    if (storedMessage == null) {
+                        throw new RuntimeException("Failed to store message");
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to store message", e);
                 }
 
                 // 发送到消息队列

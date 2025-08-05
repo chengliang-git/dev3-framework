@@ -234,7 +234,8 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
          */
         public Object handle(CapMessage message) throws Exception {
             // 检查重试次数
-            if (message.getRetries() != null && message.getRetries() >= annotation.maxRetries()) {
+            Integer retries = message.getRetries();
+            if (retries != null && retries >= annotation.maxRetries()) {
                 log.warn("Message {} exceeded max retries ({})", message.getId(), annotation.maxRetries());
                 throw new RuntimeException("Message exceeded max retries");
             }

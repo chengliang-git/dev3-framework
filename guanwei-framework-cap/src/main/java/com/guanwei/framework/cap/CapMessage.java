@@ -15,6 +15,56 @@ import java.util.Map;
 public class CapMessage {
 
     /**
+     * 消息类型枚举
+     */
+    public enum MessageType {
+        /**
+         * 普通消息
+         */
+        NORMAL,
+        
+        /**
+         * 延迟消息
+         */
+        DELAYED,
+        
+        /**
+         * 事务消息
+         */
+        TRANSACTIONAL,
+        
+        /**
+         * 重试消息
+         */
+        RETRY
+    }
+
+    /**
+     * 消息类型
+     */
+    private MessageType messageType = MessageType.NORMAL;
+
+    /**
+     * 最大重试次数
+     */
+    private int maxRetries = 3;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updatedAt;
+
+    /**
+     * 发送时间
+     */
+    private LocalDateTime sentTime;
+
+    /**
      * 数据库ID
      */
     private String dbId;
@@ -69,6 +119,94 @@ public class CapMessage {
      */
     @JsonIgnore
     private Object origin;
+
+    /**
+     * 初始化消息头
+     */
+    public void initializeHeaders() {
+        if (headers == null) {
+            headers = new HashMap<>();
+        }
+        // 可以在这里添加默认的消息头
+        headers.put("cap-version", version != null ? version : "v1");
+        headers.put("cap-timestamp", String.valueOf(System.currentTimeMillis()));
+    }
+
+    /**
+     * Builder模式
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private CapMessage message = new CapMessage();
+
+        public Builder id(String id) {
+            message.setDbId(id);
+            return this;
+        }
+
+        public Builder name(String name) {
+            message.setName(name);
+            return this;
+        }
+
+        public Builder content(String content) {
+            message.setContent(content);
+            return this;
+        }
+
+        public Builder group(String group) {
+            message.setGroup(group);
+            return this;
+        }
+
+        public Builder status(CapMessageStatus status) {
+            message.setStatus(status);
+            return this;
+        }
+
+        public Builder retries(int retries) {
+            message.setRetries(retries);
+            return this;
+        }
+
+        public Builder maxRetries(int maxRetries) {
+            message.setMaxRetries(maxRetries);
+            return this;
+        }
+
+        public Builder createdAt(LocalDateTime createdAt) {
+            message.setCreatedAt(createdAt);
+            return this;
+        }
+
+        public Builder updatedAt(LocalDateTime updatedAt) {
+            message.setUpdatedAt(updatedAt);
+            return this;
+        }
+
+        public Builder sentTime(LocalDateTime sentTime) {
+            message.setSentTime(sentTime);
+            return this;
+        }
+
+        public Builder messageType(MessageType messageType) {
+            message.setMessageType(messageType);
+            return this;
+        }
+
+        public CapMessage build() {
+            if (message.getCreatedAt() == null) {
+                message.setCreatedAt(LocalDateTime.now());
+            }
+            if (message.getUpdatedAt() == null) {
+                message.setUpdatedAt(LocalDateTime.now());
+            }
+            return message;
+        }
+    }
 
     /**
      * 构造函数

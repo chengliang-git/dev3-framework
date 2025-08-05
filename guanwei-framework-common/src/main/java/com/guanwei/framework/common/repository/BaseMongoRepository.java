@@ -114,13 +114,4 @@ public interface BaseMongoRepository<T extends BaseMongoEntity> extends MongoRep
      */
     @Query(value = "{'delFlag': 0}", sort = "{'orderNo': -1}")
     Optional<T> findTopByOrderByOrderNoDesc();
-
-    /**
-     * 获取下一个顺序号（已废弃，顺序号由前端提供）
-     */
-    @Deprecated
-    default Integer getNextOrderNo() {
-        Optional<T> topEntity = findTopByOrderByOrderNoDesc();
-        return topEntity.map(entity -> (entity.getOrderNo() != null ? entity.getOrderNo() : 0) + 1).orElse(1);
-    }
 }

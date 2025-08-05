@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.guanwei.framework.cap.CapMessage;
+import com.guanwei.framework.cap.CapMessageStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -295,7 +296,7 @@ public class RabbitMQMessageQueue implements MessageQueue {
                     .name(messageName != null ? messageName : "unknown")
                     .content(content) // 将业务对象JSON作为content
                     .group(group != null ? group : "default")
-                    .status(CapMessage.MessageStatus.PENDING)
+                    .status(CapMessageStatus.PENDING)
                     .retries(0)
                     .maxRetries(3)
                     .createdAt(now)
@@ -306,21 +307,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
             // 初始化消息头
             capMessage.initializeHeaders();
-
-            // 验证CapMessage是否正确创建
-            log.debug("CapMessage创建完成:");
-            log.debug("  - ID: {}", capMessage.getId());
-            log.debug("  - Name: {}", capMessage.getName());
-            log.debug("  - Group: {}", capMessage.getGroup());
-            log.debug("  - Content: {}", capMessage.getContent());
-            log.debug("  - Status: {}", capMessage.getStatus());
-            log.debug("  - Retries: {}", capMessage.getRetries());
-            log.debug("  - MaxRetries: {}", capMessage.getMaxRetries());
-            log.debug("  - CreatedAt: {}", capMessage.getCreatedAt());
-            log.debug("  - UpdatedAt: {}", capMessage.getUpdatedAt());
-            log.debug("  - SentTime: {}", capMessage.getSentTime());
-            log.debug("  - MessageType: {}", capMessage.getMessageType());
-            log.debug("  - Headers: {}", capMessage.getHeaders());
 
             return capMessage;
         } catch (Exception e) {

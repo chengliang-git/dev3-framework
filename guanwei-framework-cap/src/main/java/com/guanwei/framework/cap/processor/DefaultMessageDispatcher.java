@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -190,15 +191,9 @@ public class DefaultMessageDispatcher implements MessageDispatcher {
         if (stopping.get()) {
             return CompletableFuture.failedFuture(new IllegalStateException("Dispatcher is stopping"));
         }
-
-        try {
-            ScheduledMessage scheduledMessage = new ScheduledMessage(message, publishTime);
-            scheduledQueue.put(scheduledMessage);
-            return CompletableFuture.completedFuture(null);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return CompletableFuture.failedFuture(e);
-        }
+        ScheduledMessage scheduledMessage = new ScheduledMessage(message, publishTime);
+        scheduledQueue.offer(scheduledMessage);
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
@@ -259,12 +254,21 @@ public class DefaultMessageDispatcher implements MessageDispatcher {
     private void processScheduledMessages() {
         try {
             LocalDateTime now = LocalDateTime.now();
-            java.util.List<ScheduledMessage> readyMessages = scheduledQueue.stream()
-                .filter(msg -> msg.publishTime.isBefore(now) || msg.publishTime.isEqual(now))
-                .toList();
+            java.util.List<ScheduledMessage> readyMessages = new ArrayList<>();
+            
+            // 安全地从队列中获取消息
+            ScheduledMessage message;
+            while ((message = scheduledQueue.poll()) != null) {
+                if (message.publishTime.isBefore(now) || message.publishTime.isEqual(now)) {
+                    readyMessages.add(message);
+                } else {
+                    // 如果消息还没到时间，重新放回队列
+                    scheduledQueue.offer(message);
+                    break; // 由于是优先级队列，后面的消息时间更晚，可以退出
+                }
+            }
 
             for (ScheduledMessage scheduledMessage : readyMessages) {
-                scheduledQueue.remove(scheduledMessage);
                 enqueueToPublish(scheduledMessage.message)
                     .exceptionally(ex -> {
                         log.error("Error enqueueing scheduled message: {}", 

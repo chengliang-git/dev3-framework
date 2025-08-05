@@ -16,6 +16,55 @@ spring:
     username: ${ORACLE_USERNAME:tles_user}
     password: ${ORACLE_PASSWORD:tles_pass}
 
+# CAP配置（生产环境）
+cap:
+  # 生产环境CAP配置
+  storage:
+    type: "oracle"
+    database:
+      connection-string: "${ORACLE_URL:jdbc:oracle:thin:@localhost:1521:ORCL}"
+      username: "${ORACLE_USERNAME:tles_user}"
+      password: "${ORACLE_PASSWORD:tles_pass}"
+      schema: "${ORACLE_SCHEMA:CAP}"
+      table-prefix: "CAP_"
+  
+  message-queue:
+    type: "rabbitmq"
+    rabbitmq:
+      host: "${RABBITMQ_HOST:localhost}"
+      port: "${RABBITMQ_PORT:5672}"
+      username: "${RABBITMQ_USERNAME:guest}"
+      password: "${RABBITMQ_PASSWORD:guest}"
+      virtual-host: "${RABBITMQ_VHOST:/}"
+      exchange-name: "tles.case-biz.case-v1"
+      exchange-type: "topic"
+      queue-prefix: "cap_"
+  
+  # 生产环境优化配置
+  consumer-thread-count: 20
+  enable-subscriber-parallel-execute: true
+  subscriber-parallel-execute-thread-count: 10
+  subscriber-parallel-execute-buffer-factor: 2
+  enable-publish-parallel-send: true
+  
+  # 生产环境消息过期配置
+  succeed-message-expired-after: 86400   # 成功消息24小时后过期
+  failed-message-expired-after: 259200   # 失败消息3天后过期
+  
+  # 生产环境重试配置
+  failed-retry-interval: 60   # 失败重试间隔60秒
+  failed-retry-count: 5       # 最大重试次数5次
+  
+  # 生产环境清理配置
+  collector-cleaning-interval: 3600  # 清理间隔1小时
+  scheduler-batch-size: 200          # 调度批处理大小
+  
+  # 分布式锁配置
+  use-storage-lock: true
+  
+  # 回退窗口配置
+  fallback-window-lookback-seconds: 300
+
 # 日志配置（生产环境）
 logging:
   level:

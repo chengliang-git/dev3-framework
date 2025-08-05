@@ -118,7 +118,6 @@ public class MessageRetryProcessor {
                 messageStorage.acquireLockAsync(lockKey, ttl, instance)
                     .thenCompose(acquired -> {
                         if (!acquired) {
-                            log.debug("Failed to acquire received retry lock");
                             return CompletableFuture.completedFuture(null);
                         }
                         return processReceivedMessages()

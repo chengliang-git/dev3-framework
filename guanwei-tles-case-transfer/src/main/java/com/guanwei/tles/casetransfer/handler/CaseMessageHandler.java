@@ -3,7 +3,6 @@ package com.guanwei.tles.casetransfer.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.annotation.CapSubscribe;
-import com.guanwei.tles.casetransfer.dto.CaseMessage;
 import com.guanwei.tles.casetransfer.entity.oracle.CaseInfoEntity;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import lombok.RequiredArgsConstructor;
@@ -48,26 +47,8 @@ public class CaseMessageHandler {
         try {
             log.info("收到案件立案消息: {}", capMessage.getId());
 
-            // 解析消息内容 - 可能是CaseEntity的JSON
-            try {
-                // 首先尝试解析为CaseMessage
-                CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
-                caseTransferService.handleCaseCreated(caseEntity);
-            } catch (Exception e) {
-                log.debug("Failed to parse as CaseMessage, trying to parse as CaseEntity: {}", e.getMessage());
-
-                // 如果解析CaseMessage失败，尝试解析为CaseEntity
-                try {
-                    CaseInfoEntity caseEntity = objectMapper.readValue(
-                            capMessage.getContent(), CaseInfoEntity.class);
-
-                    caseTransferService.handleCaseCreated(caseEntity);
-                } catch (Exception caseEntityException) {
-                    log.error("Failed to parse message content as either CaseMessage or CaseEntity",
-                            caseEntityException);
-                    throw new RuntimeException("Failed to parse message content", caseEntityException);
-                }
-            }
+            CaseInfoEntity caseEntity = objectMapper.readValue(capMessage.getContent(), CaseInfoEntity.class);
+            caseTransferService.handleCaseCreated(caseEntity);
 
             log.info("案件立案消息处理完成: {}", capMessage.getId());
         } catch (Exception e) {
@@ -191,21 +172,5 @@ public class CaseMessageHandler {
         } catch (Exception e) {
             log.error("RabbitMQ处理案件立案消息失败", e);
         }
-    }
-
-    /**
-     * 将CaseEntity转换为CaseMessage
-     */
-    private CaseMessage convertCaseEntityToCaseMessage(
-            CaseInfoEntity caseEntity) {
-        CaseMessage caseMessage = new CaseMessage();
-        caseMessage.setCaseId(caseEntity.getCaseId());
-        caseMessage.setOperationType("CREATE"); // 默认为新增操作
-        caseMessage.setTimestamp(System.currentTimeMillis());
-        caseMessage.setSource("tles.case.filing");
-        caseMessage.setDescription("案件立案消息 - " + caseEntity.getCaseNo());
-
-        log.info("Converted CaseEntity to CaseMessage: caseId={}", caseEntity.getCaseId());
-        return caseMessage;
     }
 }
