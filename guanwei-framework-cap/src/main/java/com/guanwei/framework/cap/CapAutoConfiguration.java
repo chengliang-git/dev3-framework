@@ -3,151 +3,156 @@ package com.guanwei.framework.cap;
 import com.guanwei.framework.cap.impl.CapPublisherImpl;
 import com.guanwei.framework.cap.impl.CapSubscriberImpl;
 import com.guanwei.framework.cap.impl.CapTransactionManagerImpl;
-import com.guanwei.framework.cap.processor.CapSubscribeProcessor;
-import com.guanwei.framework.cap.processor.CapSubscriberProcessor;
-import com.guanwei.framework.cap.queue.CapQueueManager;
+import com.guanwei.framework.cap.processor.*;
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
-import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
+
+import jakarta.annotation.PreDestroy;
 
 /**
- * CAP 组件自动配置类
- * 负责自动配置 CAP 组件的所有 Bean
- * 
- * @author Guanwei Framework
- * @since 1.0.0
+ * CAP 自动配置类
+ * 参考 .NET Core CAP 的自动配置机制
  */
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(CapProperties.class)
-@ComponentScan(basePackages = "com.guanwei.framework.cap")
 @ConditionalOnProperty(prefix = "cap", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CapAutoConfiguration {
 
+    private MessageRetryProcessor messageRetryProcessor;
+    private MessageCollectorProcessor messageCollectorProcessor;
+    private DefaultMessageDispatcher messageDispatcher;
+
     /**
-     * 配置 CAP 发布者
+     * 配置消息存储
      */
     @Bean
-    @ConditionalOnMissingBean(CapPublisher.class)
-    public CapPublisher capPublisher(MessageQueue messageQueue, MessageStorage messageStorage,
-            CapProperties capProperties, CapTransactionManager transactionManager) {
-        log.info("Creating CAP Publisher bean");
-        return new CapPublisherImpl(messageQueue, messageStorage, capProperties, transactionManager);
+    public MessageStorage messageStorage(CapProperties properties) {
+        // 根据配置选择存储类型
+        String storageType = properties.getStorage().getType();
+        switch (storageType.toLowerCase()) {
+            case "memory":
+                return new com.guanwei.framework.cap.storage.MemoryMessageStorage();
+            case "redis":
+                return new com.guanwei.framework.cap.storage.RedisMessageStorage();
+            default:
+                log.warn("Unknown storage type: {}, using memory storage", storageType);
+                return new com.guanwei.framework.cap.storage.MemoryMessageStorage();
+        }
     }
 
     /**
-     * 配置 CAP 订阅者
+     * 配置消息队列
      */
     @Bean
-    @ConditionalOnMissingBean(CapSubscriber.class)
-    public CapSubscriber capSubscriber(MessageStorage messageStorage, MessageQueue messageQueue,
-            CapProperties capProperties) {
-        log.info("Creating CAP Subscriber bean");
-        return new CapSubscriberImpl(messageStorage, messageQueue, capProperties);
-    }
-
-    /**
-     * 配置 CAP 事务管理器
-     */
-    @Bean
-    @ConditionalOnMissingBean(CapTransactionManager.class)
-    public CapTransactionManager capTransactionManager() {
-        log.info("Creating CAP Transaction Manager bean");
-        return new CapTransactionManagerImpl();
-    }
-
-    /**
-     * 配置 CAP 订阅者处理器
-     */
-    @Bean
-    @ConditionalOnMissingBean(CapSubscriberProcessor.class)
-    public CapSubscriberProcessor capSubscriberProcessor(CapSubscriber capSubscriber) {
-        log.info("Creating CAP Subscriber Processor bean");
-        return new CapSubscriberProcessor(capSubscriber);
-    }
-
-    /**
-     * 配置 CAP 订阅处理器
-     */
-    @Bean
-    @ConditionalOnMissingBean(CapSubscribeProcessor.class)
-    public CapSubscribeProcessor capSubscribeProcessor() {
-        log.info("Creating CAP Subscribe Processor bean");
-        return new CapSubscribeProcessor();
-    }
-
-    /**
-     * 配置消息队列（默认使用内存队列）
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "messageQueue")
-    @ConditionalOnProperty(prefix = "cap.message-queue", name = "type", havingValue = "memory", matchIfMissing = true)
-    public MessageQueue memoryMessageQueue() {
-        log.info("Creating Memory Message Queue bean");
+    public MessageQueue messageQueue(CapProperties properties) {
+        // 暂时只使用内存队列
         return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
     }
 
     /**
-     * 配置 RabbitMQ 消息队列
+     * 配置订阅执行器
      */
     @Bean
-    @ConditionalOnMissingBean(name = "messageQueue")
-    @ConditionalOnProperty(prefix = "cap.message-queue", name = "type", havingValue = "rabbitmq", matchIfMissing = false)
-    public MessageQueue rabbitMQMessageQueue(AmqpAdmin amqpAdmin, RabbitTemplate rabbitTemplate,
-            ConnectionFactory connectionFactory, CapQueueManager capQueueManager,
-            @Value("${cap.message-queue.exchange-name:cap.exchange}") String exchangeName,
-            @Value("${cap.message-queue.queue-prefix:cap_}") String queuePrefix) {
-        log.info("Creating RabbitMQ Message Queue bean");
-        return new com.guanwei.framework.cap.queue.RabbitMQMessageQueue(amqpAdmin, rabbitTemplate,
-                connectionFactory, capQueueManager,
-                exchangeName, queuePrefix);
+    public SubscribeExecutor subscribeExecutor(CapProperties properties, MessageStorage messageStorage) {
+        return new DefaultSubscribeExecutor(properties, messageStorage);
     }
 
     /**
-     * 配置消息存储（默认使用内存存储）
+     * 配置消息发送器
      */
     @Bean
-    @ConditionalOnMissingBean(name = "messageStorage")
-    @ConditionalOnProperty(prefix = "cap.storage", name = "type", havingValue = "memory", matchIfMissing = true)
-    public MessageStorage memoryMessageStorage() {
-        log.info("Creating Memory Message Storage bean");
-        return new com.guanwei.framework.cap.storage.MemoryMessageStorage();
+    public MessageSender messageSender(CapProperties properties, MessageQueue messageQueue) {
+        return new DefaultMessageSender(properties, messageQueue);
     }
 
     /**
-     * 配置 Redis 消息存储
+     * 配置消息分发器
      */
     @Bean
-    @ConditionalOnMissingBean(name = "messageStorage")
-    @ConditionalOnProperty(prefix = "cap.storage", name = "type", havingValue = "redis", matchIfMissing = false)
-    public MessageStorage redisMessageStorage() {
-        log.info("Creating Redis Message Storage bean");
-        return new com.guanwei.framework.cap.storage.RedisMessageStorage();
+    public MessageDispatcher messageDispatcher(CapProperties properties,
+                                              MessageStorage messageStorage,
+                                              MessageQueue messageQueue,
+                                              SubscribeExecutor subscribeExecutor,
+                                              MessageSender messageSender) {
+        this.messageDispatcher = new DefaultMessageDispatcher(properties, messageStorage, messageQueue, subscribeExecutor, messageSender);
+        return this.messageDispatcher;
     }
 
     /**
-     * 配置 CAP 队列管理器（仅在使用 RabbitMQ 时）
+     * 配置消息重试处理器
      */
     @Bean
-    @ConditionalOnMissingBean(CapQueueManager.class)
-    @ConditionalOnProperty(prefix = "cap.message-queue", name = "type", havingValue = "rabbitmq", matchIfMissing = false)
-    public CapQueueManager capQueueManager(RabbitAdmin rabbitAdmin,
-            @Value("${cap.message-queue.exchange-name:cap.exchange}") String exchangeName,
-            @Value("${cap.message-queue.exchange-type:topic}") String exchangeType,
-            @Value("${cap.default-group:default}") String defaultGroup) {
-        log.info("Creating CAP Queue Manager bean with exchange: {} (type: {})", exchangeName, exchangeType);
-        return new CapQueueManager(rabbitAdmin, exchangeName, exchangeType, defaultGroup);
+    public MessageRetryProcessor messageRetryProcessor(CapProperties properties,
+                                                       MessageStorage messageStorage,
+                                                       MessageDispatcher messageDispatcher) {
+        this.messageRetryProcessor = new MessageRetryProcessor(properties, messageStorage, messageDispatcher);
+        return this.messageRetryProcessor;
+    }
+
+    /**
+     * 配置消息清理处理器
+     */
+    @Bean
+    public MessageCollectorProcessor messageCollectorProcessor(CapProperties properties,
+                                                               MessageStorage messageStorage) {
+        this.messageCollectorProcessor = new MessageCollectorProcessor(properties, messageStorage);
+        return this.messageCollectorProcessor;
+    }
+
+    /**
+     * 配置CAP发布器
+     */
+    @Bean
+    public CapPublisher capPublisher(CapProperties properties,
+                                    MessageStorage messageStorage,
+                                    MessageQueue messageQueue,
+                                    CapTransactionManager capTransactionManager) {
+        return new CapPublisherImpl(messageQueue, messageStorage, properties, capTransactionManager);
+    }
+
+    /**
+     * 配置CAP订阅器
+     */
+    @Bean
+    public CapSubscriber capSubscriber(CapProperties properties,
+                                       MessageStorage messageStorage,
+                                       MessageQueue messageQueue) {
+        return new CapSubscriberImpl(messageStorage, messageQueue, properties);
+    }
+
+    /**
+     * 配置CAP事务管理器
+     */
+    @Bean
+    public CapTransactionManager capTransactionManager() {
+        return new CapTransactionManagerImpl();
+    }
+
+    /**
+     * 应用关闭时清理资源
+     */
+    @PreDestroy
+    public void destroy() {
+        log.info("Shutting down CAP components...");
+        
+        if (messageRetryProcessor != null) {
+            messageRetryProcessor.shutdown();
+        }
+        
+        if (messageCollectorProcessor != null) {
+            messageCollectorProcessor.shutdown();
+        }
+        
+        if (messageDispatcher != null) {
+            messageDispatcher.stop();
+        }
+        
+        log.info("CAP components shutdown completed");
     }
 }

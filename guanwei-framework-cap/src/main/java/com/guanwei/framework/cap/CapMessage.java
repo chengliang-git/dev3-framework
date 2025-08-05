@@ -1,41 +1,28 @@
 package com.guanwei.framework.cap;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * CAP 消息实体类
- * 参考 .NET Core CAP 组件的消息结构
+ * CAP 消息实体
+ * 参考 .NET Core CAP 的 MediumMessage 类
  */
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class CapMessage {
 
     /**
-     * 消息ID
+     * 数据库ID
      */
-    private String id;
+    private String dbId;
 
     /**
-     * 消息名称/主题
+     * 消息名称
      */
     private String name;
-
-    /**
-     * 消息内容
-     */
-    private String content;
 
     /**
      * 消息组
@@ -43,285 +30,195 @@ public class CapMessage {
     private String group;
 
     /**
+     * 消息内容
+     */
+    private String content;
+
+    /**
      * 消息状态
      */
-    private MessageStatus status;
+    private CapMessageStatus status;
 
     /**
      * 重试次数
      */
-    private Integer retries;
-
-    /**
-     * 最大重试次数
-     */
-    private Integer maxRetries;
+    private int retries;
 
     /**
      * 过期时间
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime expiresAt;
 
     /**
-     * 创建时间
+     * 添加时间
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createdAt;
+    private LocalDateTime added;
 
     /**
-     * 更新时间
+     * 版本
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime updatedAt;
+    private String version;
 
     /**
-     * 消息头信息
+     * 消息头
      */
-    private Map<String, String> headers;
+    private Map<String, String> headers = new HashMap<>();
 
     /**
-     * 回调名称
+     * 原始消息对象
      */
-    private String callbackName;
+    @JsonIgnore
+    private Object origin;
 
     /**
-     * 关联ID
+     * 构造函数
      */
-    private String correlationId;
-
-    /**
-     * 关联序列号
-     */
-    private Integer correlationSequence;
-
-    /**
-     * 执行实例ID
-     */
-    private String executionInstanceId;
-
-    /**
-     * 发送时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime sentTime;
-
-    /**
-     * 延迟时间（秒）
-     */
-    private Long delayTime;
-
-    /**
-     * 异常信息
-     */
-    private String exception;
-
-    /**
-     * 消息类型
-     */
-    private MessageType messageType;
-
-    /**
-     * 消息状态枚举
-     */
-    public enum MessageStatus {
-        PENDING, // 待处理
-        SUCCEEDED, // 成功
-        FAILED, // 失败
-        RETRYING // 重试中
+    public CapMessage() {
+        this.added = LocalDateTime.now();
+        this.retries = 0;
+        this.status = CapMessageStatus.SCHEDULED;
     }
 
     /**
-     * 消息类型枚举
+     * 构造函数
+     *
+     * @param name    消息名称
+     * @param content 消息内容
      */
-    public enum MessageType {
-        NORMAL, // 普通消息
-        DELAY, // 延迟消息
-        TRANSACTIONAL // 事务性消息
+    public CapMessage(String name, Object content) {
+        this();
+        this.name = name;
+        this.content = content instanceof String ? (String) content : content.toString();
+        this.origin = content;
     }
 
     /**
-     * 消息头常量
+     * 构造函数
+     *
+     * @param name    消息名称
+     * @param group   消息组
+     * @param content 消息内容
      */
-    public static class Headers {
-        public static final String MESSAGE_ID = "cap-msg-id";
-        public static final String MESSAGE_NAME = "cap-msg-name";
-        public static final String GROUP = "cap-msg-group";
-        public static final String TYPE = "cap-msg-type";
-        public static final String CORRELATION_ID = "cap-corr-id";
-        public static final String CORRELATION_SEQUENCE = "cap-corr-seq";
-        public static final String CALLBACK_NAME = "cap-callback-name";
-        public static final String EXECUTION_INSTANCE_ID = "cap-exec-instance-id";
-        public static final String SENT_TIME = "cap-senttime";
-        public static final String DELAY_TIME = "cap-delaytime";
-        public static final String EXCEPTION = "cap-exception";
-        public static final String TRACE_PARENT = "traceparent";
+    public CapMessage(String name, String group, Object content) {
+        this(name, content);
+        this.group = group;
     }
 
     /**
      * 获取消息ID
+     *
+     * @return 消息ID
      */
     public String getId() {
-        if (id != null) {
-            return id;
-        }
-        if (headers != null && headers.containsKey(Headers.MESSAGE_ID)) {
-            return headers.get(Headers.MESSAGE_ID);
-        }
-        return null;
+        return dbId;
     }
 
     /**
      * 获取消息名称
+     *
+     * @return 消息名称
      */
     public String getName() {
-        if (name != null) {
-            return name;
-        }
-        if (headers != null && headers.containsKey(Headers.MESSAGE_NAME)) {
-            return headers.get(Headers.MESSAGE_NAME);
-        }
-        return null;
+        return name;
     }
 
     /**
      * 获取消息组
+     *
+     * @return 消息组
      */
     public String getGroup() {
-        if (group != null) {
-            return group;
-        }
-        if (headers != null && headers.containsKey(Headers.GROUP)) {
-            return headers.get(Headers.GROUP);
-        }
-        return null;
+        return group;
     }
 
     /**
-     * 获取回调名称
+     * 获取消息内容
+     *
+     * @return 消息内容
      */
-    public String getCallbackName() {
-        if (callbackName != null) {
-            return callbackName;
-        }
-        if (headers != null && headers.containsKey(Headers.CALLBACK_NAME)) {
-            return headers.get(Headers.CALLBACK_NAME);
-        }
-        return null;
+    public String getContent() {
+        return content;
     }
 
     /**
-     * 获取关联ID
+     * 获取消息头
+     *
+     * @param key 键
+     * @return 值
      */
-    public String getCorrelationId() {
-        if (correlationId != null) {
-            return correlationId;
-        }
-        if (headers != null && headers.containsKey(Headers.CORRELATION_ID)) {
-            return headers.get(Headers.CORRELATION_ID);
-        }
-        return null;
+    public String getHeader(String key) {
+        return headers.get(key);
     }
 
     /**
-     * 获取关联序列号
+     * 设置消息头
+     *
+     * @param key   键
+     * @param value 值
      */
-    public Integer getCorrelationSequence() {
-        if (correlationSequence != null) {
-            return correlationSequence;
-        }
-        if (headers != null && headers.containsKey(Headers.CORRELATION_SEQUENCE)) {
-            try {
-                return Integer.parseInt(headers.get(Headers.CORRELATION_SEQUENCE));
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
+    public void setHeader(String key, String value) {
+        headers.put(key, value);
     }
 
     /**
-     * 获取执行实例ID
+     * 获取消息头映射
+     *
+     * @return 消息头映射
      */
-    public String getExecutionInstanceId() {
-        if (executionInstanceId != null) {
-            return executionInstanceId;
-        }
-        if (headers != null && headers.containsKey(Headers.EXECUTION_INSTANCE_ID)) {
-            return headers.get(Headers.EXECUTION_INSTANCE_ID);
-        }
-        return null;
+    public Map<String, String> getHeaders() {
+        return headers;
     }
 
     /**
-     * 检查是否有异常
+     * 设置消息头映射
+     *
+     * @param headers 消息头映射
      */
-    public boolean hasException() {
-        return exception != null || (headers != null && headers.containsKey(Headers.EXCEPTION));
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
     }
 
     /**
-     * 添加或更新异常信息
+     * 获取原始消息对象
+     *
+     * @return 原始消息对象
      */
-    public void addOrUpdateException(Exception ex) {
-        String msg = ex.getClass().getSimpleName() + "-->" + ex.getMessage();
-        this.exception = msg;
-        if (headers == null) {
-            headers = new HashMap<>();
-        }
-        headers.put(Headers.EXCEPTION, msg);
+    public Object getOrigin() {
+        return origin;
     }
 
     /**
-     * 移除异常信息
+     * 设置原始消息对象
+     *
+     * @param origin 原始消息对象
      */
-    public void removeException() {
-        this.exception = null;
-        if (headers != null) {
-            headers.remove(Headers.EXCEPTION);
-        }
+    public void setOrigin(Object origin) {
+        this.origin = origin;
     }
 
     /**
-     * 初始化消息头
+     * 增加重试次数
      */
-    public void initializeHeaders() {
-        if (headers == null) {
-            headers = new HashMap<>();
-        }
+    public void incrementRetries() {
+        this.retries++;
+    }
 
-        if (id != null) {
-            headers.put(Headers.MESSAGE_ID, id);
-        }
-        if (name != null) {
-            headers.put(Headers.MESSAGE_NAME, name);
-        }
-        if (group != null) {
-            headers.put(Headers.GROUP, group);
-        }
-        if (callbackName != null) {
-            headers.put(Headers.CALLBACK_NAME, callbackName);
-        }
-        if (correlationId != null) {
-            headers.put(Headers.CORRELATION_ID, correlationId);
-        }
-        if (correlationSequence != null) {
-            headers.put(Headers.CORRELATION_SEQUENCE, correlationSequence.toString());
-        }
-        if (executionInstanceId != null) {
-            headers.put(Headers.EXECUTION_INSTANCE_ID, executionInstanceId);
-        }
-        if (sentTime != null) {
-            headers.put(Headers.SENT_TIME, sentTime.toString());
-        }
-        if (delayTime != null) {
-            headers.put(Headers.DELAY_TIME, delayTime.toString());
-        }
-        if (exception != null) {
-            headers.put(Headers.EXCEPTION, exception);
-        }
-        if (messageType != null) {
-            headers.put(Headers.TYPE, messageType.name());
-        }
+    /**
+     * 检查是否过期
+     *
+     * @return 是否过期
+     */
+    public boolean isExpired() {
+        return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
+    }
+
+    /**
+     * 检查是否可以重试
+     *
+     * @param maxRetries 最大重试次数
+     * @return 是否可以重试
+     */
+    public boolean canRetry(int maxRetries) {
+        return retries < maxRetries;
     }
 }
