@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapMessageStatus;
+import com.guanwei.framework.cap.util.MessageIdGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -266,7 +267,7 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
             // 创建CapMessage，将原始JSON作为content
             String content = jsonNode.toString();
-            Long messageId = System.currentTimeMillis() + Thread.currentThread().getId();
+            Long messageId = MessageIdGenerator.getInstance().nextId();
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
             CapMessage capMessage = CapMessage.builder()

@@ -1,6 +1,7 @@
 package com.guanwei.framework.cap.impl;
 
 import com.guanwei.framework.cap.CapTransaction;
+import com.guanwei.framework.cap.util.MessageIdGenerator;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -29,7 +30,7 @@ public class CapTransactionImpl implements CapTransaction {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public CapTransactionImpl(Object dbTransaction, long timeout) {
-        this.transactionId = String.valueOf(System.currentTimeMillis() + Thread.currentThread().getId());
+        this.transactionId = String.valueOf(MessageIdGenerator.getInstance().nextId());
         this.startTime = System.currentTimeMillis();
         this.timeout = timeout;
         this.dbTransaction = dbTransaction;

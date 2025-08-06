@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.guanwei.framework.cap.util.MessageIdGenerator;
 
 /**
  * CAP 发布者实现类
@@ -218,8 +219,8 @@ public class CapPublisherImpl implements CapPublisher {
     private Long publishInternal(String name, Object content, String callbackName, String group,
             Map<String, String> headers, boolean transactional, Long delaySeconds) {
         try {
-            // 生成消息ID（长整型）
-            Long messageId = System.currentTimeMillis() + Thread.currentThread().getId();
+            // 生成消息ID（使用雪花算法避免重复）
+            Long messageId = MessageIdGenerator.getInstance().nextId();
 
             // 创建CAP消息
             CapMessage capMessage = new CapMessage(name, content);

@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.guanwei.framework.cap.util.MessageIdGenerator;
 
 /**
  * Oracle 消息存储实现
@@ -419,7 +420,7 @@ public class OracleMessageStorage implements MessageStorage {
     }
 
     private Long generateMessageId() {
-        return System.currentTimeMillis() + Thread.currentThread().getId();
+        return MessageIdGenerator.getInstance().nextId();
     }
 
     private static class CapMessageRowMapper implements RowMapper<CapMessage> {
