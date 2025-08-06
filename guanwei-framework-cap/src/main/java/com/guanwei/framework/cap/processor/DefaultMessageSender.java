@@ -58,7 +58,6 @@ public class DefaultMessageSender implements MessageSender {
             boolean sent = messageQueue.send(message.getName(), message);
             
             if (sent) {
-                log.debug("Message sent successfully: {}", message.getName());
                 return CompletableFuture.completedFuture(OperateResult.success());
             } else {
                 log.error("Failed to send message: {}", message.getName());

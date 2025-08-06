@@ -166,7 +166,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
                     // 检查消息体是否为空
                     if (messageBody == null || messageBody.length == 0) {
-                        log.debug("Received empty message from queue: {}", queueName);
                         return null;
                     }
 
@@ -181,7 +180,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
                             objectMapper.readTree(messageJson);
                             break;
                         } catch (Exception e) {
-                            log.debug("Failed to decode message using encoding: {}", encoding);
                             continue;
                         }
                     }
@@ -191,8 +189,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
                         return null;
                     }
 
-                    log.debug("Received message from queue {}: {}", queueName, messageJson);
-
                     // 尝试解析为CapMessage，如果失败则尝试解析为业务对象并转换
                     try {
                         // 首先尝试直接解析为CapMessage
@@ -200,18 +196,11 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
                         // 检查解析出的CapMessage是否有效（有id和name字段）
                         if (capMessage.getId() != null && capMessage.getName() != null) {
-                            log.debug("Successfully parsed as valid CapMessage: {}", capMessage.getId());
                             return capMessage;
                         } else {
-                            log.debug("Parsed as CapMessage but fields are empty, treating as business object");
-                            // 如果解析出的CapMessage字段为空，说明这可能是业务对象JSON
-                            // 需要重新解析为业务对象并转换
                             throw new Exception("CapMessage fields are empty, treating as business object");
                         }
                     } catch (Exception e) {
-                        log.debug("Failed to parse as valid CapMessage, trying to parse as business object: {}",
-                                e.getMessage());
-
                         // 如果解析CapMessage失败，尝试解析为业务对象JSON并转换为CapMessage
                         try {
                             JsonNode jsonNode = objectMapper.readTree(messageJson);
@@ -228,10 +217,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
                                 if (jsonNode.size() > 0) {
                                     CapMessage capMessage = convertBusinessObjectToCapMessage(jsonNode.get(0),
                                             queueName);
-                                    if (capMessage != null) {
-                                        log.debug("Successfully converted array element to CapMessage: {}",
-                                                capMessage.getId());
-                                    }
                                     return capMessage;
                                 }
                             }
@@ -260,8 +245,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
      */
     private CapMessage convertBusinessObjectToCapMessage(JsonNode jsonNode, String queueName) {
         try {
-            log.debug("开始转换业务对象为CapMessage，队列名称: {}", queueName);
-
             // 从队列名称中提取消息主题
             String messageName = null;
             String group = null;
@@ -269,7 +252,6 @@ public class RabbitMQMessageQueue implements MessageQueue {
             if (capQueueManager != null) {
                 messageName = capQueueManager.extractMessageTopicFromQueueName(queueName);
                 group = capQueueManager.extractGroupFromQueueName(queueName);
-                log.debug("使用capQueueManager解析队列名称: messageName={}, group={}", messageName, group);
             } else {
                 // 如果capQueueManager为null，尝试从队列名称中手动解析
                 if (queueName.contains(".")) {
@@ -280,16 +262,12 @@ public class RabbitMQMessageQueue implements MessageQueue {
                     messageName = queueName;
                     group = "default";
                 }
-                log.debug("手动解析队列名称: messageName={}, group={}", messageName, group);
             }
 
             // 创建CapMessage，将原始JSON作为content
             String content = jsonNode.toString();
             Long messageId = System.currentTimeMillis() + Thread.currentThread().getId();
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
-
-            log.debug("创建CapMessage: id={}, name={}, group={}, content长度={}",
-                    messageId, messageName, group, content.length());
 
             CapMessage capMessage = CapMessage.builder()
                     .id(messageId)

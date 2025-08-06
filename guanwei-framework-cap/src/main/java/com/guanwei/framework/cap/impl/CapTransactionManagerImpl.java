@@ -50,7 +50,6 @@ public class CapTransactionManagerImpl implements CapTransactionManager {
     public CapTransaction beginTransaction(Object dbTransaction, long timeout) {
         CapTransaction transaction = new CapTransactionImpl(dbTransaction, timeout);
         currentTransaction.set(transaction);
-        log.debug("Started CAP transaction: {}", transaction.getTransactionId());
         return transaction;
     }
 
@@ -129,7 +128,6 @@ public class CapTransactionManagerImpl implements CapTransactionManager {
         CapTransaction transaction = currentTransaction.get();
         if (transaction != null && !transaction.isActive()) {
             currentTransaction.remove();
-            log.debug("Cleaned up expired transaction: {}", transaction.getTransactionId());
         }
     }
 

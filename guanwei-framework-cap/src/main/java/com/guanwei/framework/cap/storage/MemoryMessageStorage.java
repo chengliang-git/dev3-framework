@@ -36,7 +36,6 @@ public class MemoryMessageStorage implements MessageStorage {
 
                 LockInfo newLock = new LockInfo(instance, LocalDateTime.now().plus(ttl));
                 locks.put(key, newLock);
-                log.debug("Acquired lock: {} by instance: {}", key, instance);
                 return true;
             } catch (Exception e) {
                 log.error("Error acquiring lock: {}", key, e);
@@ -52,7 +51,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 LockInfo lock = locks.get(key);
                 if (lock != null && instance.equals(lock.getInstance())) {
                     locks.remove(key);
-                    log.debug("Released lock: {} by instance: {}", key, instance);
                 }
             } catch (Exception e) {
                 log.error("Error releasing lock: {}", key, e);
@@ -67,7 +65,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 LockInfo lock = locks.get(key);
                 if (lock != null && instance.equals(lock.getInstance())) {
                     lock.setExpiresAt(LocalDateTime.now().plus(ttl));
-                    log.debug("Renewed lock: {} by instance: {}", key, instance);
                 }
             } catch (Exception e) {
                 log.error("Error renewing lock: {}", key, e);
@@ -83,7 +80,6 @@ public class MemoryMessageStorage implements MessageStorage {
                     CapMessage message = publishedMessages.get(id);
                     if (message != null) {
                         message.setStatus(CapMessageStatus.DELAYED);
-                        log.debug("Changed publish state to delayed: {}", id);
                     }
                 }
             } catch (Exception e) {
@@ -100,7 +96,6 @@ public class MemoryMessageStorage implements MessageStorage {
                     CapMessage storedMessage = publishedMessages.get(message.getId());
                     if (storedMessage != null) {
                         storedMessage.setStatus(status);
-                        log.debug("Changed publish state: {} -> {}", message.getId(), status);
                     }
                 }
             } catch (Exception e) {
@@ -117,7 +112,6 @@ public class MemoryMessageStorage implements MessageStorage {
                     CapMessage storedMessage = receivedMessages.get(message.getId());
                     if (storedMessage != null) {
                         storedMessage.setStatus(status);
-                        log.debug("Changed receive state: {} -> {}", message.getId(), status);
                     }
                 }
             } catch (Exception e) {
@@ -138,7 +132,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 message.setRetries(0);
                 
                 publishedMessages.put(id, message);
-                log.debug("Stored published message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing published message", e);
@@ -158,7 +151,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 exceptionMessage.setAdded(LocalDateTime.now());
                 
                 receivedMessages.put(id, exceptionMessage);
-                log.debug("Stored exception message: {}", id);
             } catch (Exception e) {
                 log.error("Error storing exception message", e);
             }
@@ -177,7 +169,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 message.setRetries(0);
                 
                 receivedMessages.put(id, message);
-                log.debug("Stored received message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing received message", e);
@@ -236,7 +227,6 @@ public class MemoryMessageStorage implements MessageStorage {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 CapMessage removed = receivedMessages.remove(id);
-                log.debug("Deleted received message: {}, result: {}", id, removed != null);
                 return removed != null ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting received message: {}", id, e);
@@ -250,7 +240,6 @@ public class MemoryMessageStorage implements MessageStorage {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 CapMessage removed = publishedMessages.remove(id);
-                log.debug("Deleted published message: {}, result: {}", id, removed != null);
                 return removed != null ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting published message: {}", id, e);
@@ -271,7 +260,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 
                 if (!delayedMessages.isEmpty()) {
                     scheduleTask.schedule(null, delayedMessages);
-                    log.debug("Scheduled {} delayed messages", delayedMessages.size());
                 }
             } catch (Exception e) {
                 log.error("Error scheduling delayed messages", e);
@@ -302,7 +290,6 @@ public class MemoryMessageStorage implements MessageStorage {
                            message.getExpiresAt().isBefore(expiredTime);
                 }) ? 1 : 0;
                 
-                log.debug("Deleted {} expired messages with status: {}", deletedCount, status);
                 return deletedCount;
             } catch (Exception e) {
                 log.error("Error deleting expired messages", e);
@@ -319,7 +306,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 CapMessage publishedMessage = publishedMessages.get(messageId);
                 if (publishedMessage != null) {
                     publishedMessage.setStatus(status);
-                    log.debug("Updated published message status: {} -> {}", messageId, status);
                     return;
                 }
                 
@@ -327,7 +313,6 @@ public class MemoryMessageStorage implements MessageStorage {
                 CapMessage receivedMessage = receivedMessages.get(messageId);
                 if (receivedMessage != null) {
                     receivedMessage.setStatus(status);
-                    log.debug("Updated received message status: {} -> {}", messageId, status);
                 }
             } catch (Exception e) {
                 log.error("Error updating message status: {}", messageId, e);
@@ -352,7 +337,6 @@ public class MemoryMessageStorage implements MessageStorage {
             processedCount++;
         }
         
-        log.debug("Deleted {} expired messages from memory storage", deletedCount);
         return deletedCount;
     }
 

@@ -191,7 +191,6 @@ public class CapTransactionImpl implements CapTransaction {
                 // 如果事务仍然活跃且未完成，则回滚
                 rollback();
             }
-            log.debug("Closed CAP transaction: {}", transactionId);
         }
     }
 

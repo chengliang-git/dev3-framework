@@ -120,8 +120,6 @@ public class OracleMessageStorage implements MessageStorage {
                 String insertSql = "INSERT INTO " + LOCK_TABLE + " (KEYID, INSTANCE, LASTLOCKTIME) VALUES (?, ?, ?)";
                 jdbcTemplate.update(insertSql, key, instance,
                         Timestamp.valueOf(LocalDateTime.now().plus(ttl)));
-
-                log.debug("Acquired lock: {} by instance: {}", key, instance);
                 return true;
             } catch (Exception e) {
                 log.debug("Failed to acquire lock: {} by instance: {}", key, instance);
@@ -136,7 +134,6 @@ public class OracleMessageStorage implements MessageStorage {
             try {
                 String sql = "DELETE FROM " + LOCK_TABLE + " WHERE KEYID = ? AND INSTANCE = ?";
                 int deleted = jdbcTemplate.update(sql, key, instance);
-                log.debug("Released lock: {} by instance: {}, deleted: {}", key, instance, deleted);
             } catch (Exception e) {
                 log.error("Error releasing lock: {}", key, e);
             }
@@ -150,7 +147,6 @@ public class OracleMessageStorage implements MessageStorage {
                 String sql = "UPDATE " + LOCK_TABLE + " SET LASTLOCKTIME = ? WHERE KEYID = ? AND INSTANCE = ?";
                 int updated = jdbcTemplate.update(sql,
                         Timestamp.valueOf(LocalDateTime.now().plus(ttl)), key, instance);
-                log.debug("Renewed lock: {} by instance: {}, updated: {}", key, instance, updated);
             } catch (Exception e) {
                 log.error("Error renewing lock: {}", key, e);
             }
@@ -165,7 +161,6 @@ public class OracleMessageStorage implements MessageStorage {
                 for (Long id : ids) {
                     jdbcTemplate.update(sql, CapMessageStatus.DELAYED.getValue(), id);
                 }
-                log.debug("Changed {} publish messages to delayed state", ids.size());
             } catch (Exception e) {
                 log.error("Error changing publish state to delayed", e);
             }
@@ -180,7 +175,6 @@ public class OracleMessageStorage implements MessageStorage {
                 if (message != null && message.getId() != null) {
                     String sql = "UPDATE " + PUBLISHED_TABLE + " SET STATUSNAME = ? WHERE ID = ?";
                     jdbcTemplate.update(sql, status.getValue(), message.getId());
-                    log.debug("Changed publish state: {} -> {}", message.getId(), status);
                 }
             } catch (Exception e) {
                 log.error("Error changing publish state", e);
@@ -195,7 +189,6 @@ public class OracleMessageStorage implements MessageStorage {
                 if (message != null && message.getId() != null) {
                     String sql = "UPDATE " + RECEIVED_TABLE + " SET STATUSNAME = ? WHERE ID = ?";
                     jdbcTemplate.update(sql, status.getValue(), message.getId());
-                    log.debug("Changed receive state: {} -> {}", message.getId(), status);
                 }
             } catch (Exception e) {
                 log.error("Error changing receive state", e);
@@ -224,7 +217,6 @@ public class OracleMessageStorage implements MessageStorage {
                 message.setAdded(LocalDateTime.now());
                 message.setRetries(0);
 
-                log.debug("Stored published message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing published message", e);
@@ -246,7 +238,6 @@ public class OracleMessageStorage implements MessageStorage {
                 jdbcTemplate.update(sql, id, name, group, content, 0,
                         CapMessageStatus.FAILED.getValue(), "v1");
 
-                log.debug("Stored exception message: {}", id);
             } catch (Exception e) {
                 log.error("Error storing exception message", e);
             }
@@ -274,7 +265,6 @@ public class OracleMessageStorage implements MessageStorage {
                 message.setAdded(LocalDateTime.now());
                 message.setRetries(0);
 
-                log.debug("Stored received message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing received message", e);
@@ -290,7 +280,6 @@ public class OracleMessageStorage implements MessageStorage {
                 String tableName = "published".equals(table) ? PUBLISHED_TABLE : RECEIVED_TABLE;
                 String sql = "DELETE FROM " + tableName + " WHERE ADDED < ? AND ROWNUM <= ?";
                 int deleted = jdbcTemplate.update(sql, Timestamp.valueOf(timeout), batchCount);
-                log.debug("Deleted {} expired messages from {}", deleted, table);
                 return deleted;
             } catch (Exception e) {
                 log.error("Error deleting expired messages", e);
@@ -343,7 +332,6 @@ public class OracleMessageStorage implements MessageStorage {
             try {
                 String sql = "DELETE FROM " + RECEIVED_TABLE + " WHERE ID = ?";
                 int deleted = jdbcTemplate.update(sql, id);
-                log.debug("Deleted received message: {}, result: {}", id, deleted);
                 return deleted;
             } catch (Exception e) {
                 log.error("Error deleting received message: {}", id, e);
@@ -358,7 +346,6 @@ public class OracleMessageStorage implements MessageStorage {
             try {
                 String sql = "DELETE FROM " + PUBLISHED_TABLE + " WHERE ID = ?";
                 int deleted = jdbcTemplate.update(sql, id);
-                log.debug("Deleted published message: {}, result: {}", id, deleted);
                 return deleted;
             } catch (Exception e) {
                 log.error("Error deleting published message: {}", id, e);
@@ -381,7 +368,6 @@ public class OracleMessageStorage implements MessageStorage {
 
                 if (!delayedMessages.isEmpty()) {
                     scheduleTask.schedule(null, delayedMessages);
-                    log.debug("Scheduled {} delayed messages", delayedMessages.size());
                 }
             } catch (Exception e) {
                 log.error("Error scheduling delayed messages", e);
@@ -408,7 +394,6 @@ public class OracleMessageStorage implements MessageStorage {
                         Timestamp.valueOf(expiredTime));
                 totalDeleted += receivedDeleted;
 
-                log.debug("Deleted {} expired messages with status: {}", totalDeleted, status);
                 return totalDeleted;
             } catch (Exception e) {
                 log.error("Error deleting expired messages", e);
@@ -425,15 +410,7 @@ public class OracleMessageStorage implements MessageStorage {
                 String publishedSql = "UPDATE " + PUBLISHED_TABLE + " SET STATUSNAME = ? WHERE ID = ?";
                 int publishedUpdated = jdbcTemplate.update(publishedSql, status.getValue(), messageId);
                 if (publishedUpdated > 0) {
-                    log.debug("Updated published message status: {} -> {}", messageId, status);
                     return;
-                }
-
-                // 尝试更新已接收消息
-                String receivedSql = "UPDATE " + RECEIVED_TABLE + " SET STATUSNAME = ? WHERE ID = ?";
-                int receivedUpdated = jdbcTemplate.update(receivedSql, status.getValue(), messageId);
-                if (receivedUpdated > 0) {
-                    log.debug("Updated received message status: {} -> {}", messageId, status);
                 }
             } catch (Exception e) {
                 log.error("Error updating message status: {}", messageId, e);

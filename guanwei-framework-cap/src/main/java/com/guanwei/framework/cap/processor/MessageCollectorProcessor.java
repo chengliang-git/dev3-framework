@@ -53,7 +53,6 @@ public class MessageCollectorProcessor {
      */
     private void cleanupExpiredMessages() {
         try {
-            log.debug("Starting to cleanup expired messages");
 
             // 清理成功的发布消息
             LocalDateTime succeedExpiredTime = LocalDateTime.now()

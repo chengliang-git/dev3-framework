@@ -110,8 +110,6 @@ public class CapQueueManager {
             rabbitAdmin.declareExchange(exchange);
             return true;
         } catch (Exception e) {
-            // 如果交换机已存在但类型不同，会抛出异常
-            log.debug("Exchange check failed for: {} (type: {})", exchangeName, exchangeType);
             return false;
         }
     }
@@ -130,7 +128,6 @@ public class CapQueueManager {
 
         // 检查是否已经创建过
         if (createdQueues.containsKey(cacheKey)) {
-            log.debug("Queue already created: {} with routing key: {}", queueName, messageName);
             return queueName;
         }
 

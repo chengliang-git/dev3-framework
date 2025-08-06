@@ -72,11 +72,11 @@ spring:
 logging:
   level:
     com.guanwei.tles.casetransfer: DEBUG
-    com.guanwei.framework: DEBUG
-    org.springframework.web: DEBUG
-    org.mybatis: DEBUG
-    org.springframework.amqp: DEBUG
-    com.rabbitmq: DEBUG
+    com.guanwei.framework: INFO
+    org.springframework.web: INFO
+    org.mybatis: INFO
+    org.springframework.amqp: INFO
+    com.rabbitmq: INFO
 
 cap:
   message-queue:

@@ -83,7 +83,6 @@ public class MessageRetryProcessor {
                 messageStorage.acquireLockAsync(lockKey, ttl, instance)
                     .thenCompose(acquired -> {
                         if (!acquired) {
-                            log.debug("Failed to acquire publish retry lock");
                             return CompletableFuture.completedFuture(null);
                         }
                         return processPublishedMessages()
@@ -181,8 +180,6 @@ public class MessageRetryProcessor {
                     return CompletableFuture.completedFuture(null);
                 }
 
-                log.debug("Found {} received messages need retry", messages.size());
-                
                 List<CompletableFuture<Void>> futures = messages.stream()
                     .map((Function<CapMessage, CompletableFuture<Void>>) message -> messageDispatcher.enqueueToExecute(message)
                         .exceptionally(ex -> {

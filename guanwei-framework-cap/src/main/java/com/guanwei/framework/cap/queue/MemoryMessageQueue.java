@@ -42,7 +42,6 @@ public class MemoryMessageQueue implements MessageQueue {
             }
 
             boolean result = queue.offer(message);
-            log.debug("Sent message to queue {}: {}", queueName, message.getId());
             return result;
         } catch (Exception e) {
             log.error("Failed to send message to queue {}: {}", queueName, message, e);
@@ -70,7 +69,6 @@ public class MemoryMessageQueue implements MessageQueue {
             message.setExpiresAt(LocalDateTime.now().plusSeconds(delaySeconds));
 
             boolean result = delayQueue.offer(message);
-            log.debug("Sent delay message to queue {}: {} (delay: {}s)", queueName, message.getId(), delaySeconds);
             return result;
         } catch (Exception e) {
             log.error("Failed to send delay message to queue {}: {}", queueName, message, e);
@@ -83,9 +81,6 @@ public class MemoryMessageQueue implements MessageQueue {
         try {
             BlockingQueue<CapMessage> queue = getOrCreateQueue(queueName);
             CapMessage message = queue.poll(timeout, TimeUnit.MILLISECONDS);
-            if (message != null) {
-                log.debug("Received message from queue {}: {}", queueName, message.getId());
-            }
             return message;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -125,11 +120,8 @@ public class MemoryMessageQueue implements MessageQueue {
     @Override
     public boolean reject(String queueName, Long messageId, boolean requeue) {
         if (requeue) {
-            // 重新入队逻辑，这里简化处理
-            log.debug("Rejected and requeued message {} to queue {}", messageId, queueName);
             return true;
         } else {
-            log.debug("Rejected message {} from queue {} (no requeue)", messageId, queueName);
             return true;
         }
     }
@@ -145,7 +137,6 @@ public class MemoryMessageQueue implements MessageQueue {
         BlockingQueue<CapMessage> queue = queues.get(queueName);
         if (queue != null) {
             queue.clear();
-            log.debug("Cleared queue: {}", queueName);
             return true;
         }
         return false;

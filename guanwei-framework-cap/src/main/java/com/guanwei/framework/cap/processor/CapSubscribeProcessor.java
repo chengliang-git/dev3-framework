@@ -115,7 +115,6 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
             try {
                 // 跳过当前正在创建的bean，避免循环依赖
                 if (beanName.equals("capSubscribeProcessor")) {
-                    log.debug("Skipping current bean to avoid circular dependency: {}", beanName);
                     continue;
                 }
 
@@ -125,20 +124,14 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
                     Class<?> beanClass = bean.getClass();
                     scannedCount++;
 
-                    log.debug("Scanning bean: {} of type: {}", beanName, beanClass.getSimpleName());
-
                     // 扫描所有带有@CapSubscribe注解的方法
                     int handlersInBean = scanMethodsForSubscribe(bean, beanClass);
                     handlerCount += handlersInBean;
                     if (handlersInBean > 0) {
                         log.info("Found {} handlers in bean: {}", handlersInBean, beanName);
                     }
-                } else {
-                    // 如果Bean还没有创建，跳过它，等待后续扫描
-                    log.debug("Bean not yet created, skipping: {}", beanName);
                 }
             } catch (Exception e) {
-                // 如果获取Bean失败，跳过它
                 log.debug("Failed to get bean: {}, skipping", beanName, e);
             }
         }

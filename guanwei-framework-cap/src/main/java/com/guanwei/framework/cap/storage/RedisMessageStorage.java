@@ -64,7 +64,6 @@ public class RedisMessageStorage implements MessageStorage {
                     instance);
                 
                 boolean acquired = result != null && result == 1L;
-                log.debug("Lock acquisition for key: {}, instance: {}, result: {}", key, instance, acquired);
                 return acquired;
             } catch (Exception e) {
                 log.error("Error acquiring lock for key: {}", key, e);
@@ -83,7 +82,6 @@ public class RedisMessageStorage implements MessageStorage {
                 script.setResultType(Long.class);
                 
                 Long result = redisTemplate.execute(script, List.of(lockKey), instance);
-                log.debug("Lock release for key: {}, instance: {}, result: {}", key, instance, result);
             } catch (Exception e) {
                 log.error("Error releasing lock for key: {}", key, e);
             }
@@ -99,7 +97,6 @@ public class RedisMessageStorage implements MessageStorage {
                 
                 if (instance.equals(currentInstance)) {
                     redisTemplate.expire(lockKey, ttl);
-                    log.debug("Lock renewed for key: {}, instance: {}", key, instance);
                 } else {
                     log.warn("Lock renewal failed for key: {}, instance: {}, current: {}", key, instance, currentInstance);
                 }
@@ -119,7 +116,6 @@ public class RedisMessageStorage implements MessageStorage {
                     if (message != null) {
                         message.setStatus(CapMessageStatus.DELAYED);
                         redisTemplate.opsForValue().set(key, message);
-                        log.debug("Changed publish state to delayed: {}", id);
                     }
                 }
             } catch (Exception e) {
@@ -136,7 +132,6 @@ public class RedisMessageStorage implements MessageStorage {
                     String key = PUBLISHED_PREFIX + message.getId();
                     message.setStatus(status);
                     redisTemplate.opsForValue().set(key, message);
-                    log.debug("Changed publish state: {} -> {}", message.getId(), status);
                 }
             } catch (Exception e) {
                 log.error("Error changing publish state", e);
@@ -152,7 +147,6 @@ public class RedisMessageStorage implements MessageStorage {
                     String key = RECEIVED_PREFIX + message.getId();
                     message.setStatus(status);
                     redisTemplate.opsForValue().set(key, message);
-                    log.debug("Changed receive state: {} -> {}", message.getId(), status);
                 }
             } catch (Exception e) {
                 log.error("Error changing receive state", e);
@@ -173,8 +167,6 @@ public class RedisMessageStorage implements MessageStorage {
                 
                 String key = PUBLISHED_PREFIX + id;
                 redisTemplate.opsForValue().set(key, message);
-                
-                log.debug("Stored published message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing published message", e);
@@ -196,7 +188,6 @@ public class RedisMessageStorage implements MessageStorage {
                 exceptionMessage.setAdded(LocalDateTime.now());
                 
                 redisTemplate.opsForValue().set(key, exceptionMessage);
-                log.debug("Stored exception message: {}", id);
             } catch (Exception e) {
                 log.error("Error storing exception message", e);
             }
@@ -216,8 +207,6 @@ public class RedisMessageStorage implements MessageStorage {
                 
                 String key = RECEIVED_PREFIX + id;
                 redisTemplate.opsForValue().set(key, message);
-                
-                log.debug("Stored received message: {}", id);
                 return message;
             } catch (Exception e) {
                 log.error("Error storing received message", e);
@@ -251,7 +240,6 @@ public class RedisMessageStorage implements MessageStorage {
                     }
                 } while (cursor != 0);
                 
-                log.debug("Deleted {} expired messages from {}", deletedCount, table);
                 return deletedCount;
             } catch (Exception e) {
                 log.error("Error deleting expired messages", e);
@@ -286,7 +274,6 @@ public class RedisMessageStorage implements MessageStorage {
                     }
                 } while (cursor != 0);
                 
-                log.debug("Found {} published messages needing retry", messages.size());
                 return messages;
             } catch (Exception e) {
                 log.error("Error getting published messages of need retry", e);
@@ -321,7 +308,6 @@ public class RedisMessageStorage implements MessageStorage {
                     }
                 } while (cursor != 0);
                 
-                log.debug("Found {} received messages needing retry", messages.size());
                 return messages;
             } catch (Exception e) {
                 log.error("Error getting received messages of need retry", e);
@@ -336,7 +322,6 @@ public class RedisMessageStorage implements MessageStorage {
             try {
                 String key = RECEIVED_PREFIX + id;
                 Boolean deleted = redisTemplate.delete(key);
-                log.debug("Deleted received message: {}, result: {}", id, deleted);
                 return deleted != null && deleted ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting received message: {}", id, e);
@@ -351,7 +336,6 @@ public class RedisMessageStorage implements MessageStorage {
             try {
                 String key = PUBLISHED_PREFIX + id;
                 Boolean deleted = redisTemplate.delete(key);
-                log.debug("Deleted published message: {}, result: {}", id, deleted);
                 return deleted != null && deleted ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting published message: {}", id, e);
@@ -387,7 +371,6 @@ public class RedisMessageStorage implements MessageStorage {
                 
                 if (!delayedMessages.isEmpty()) {
                     scheduleTask.schedule(null, delayedMessages);
-                    log.debug("Scheduled {} delayed messages", delayedMessages.size());
                 }
             } catch (Exception e) {
                 log.error("Error scheduling delayed messages", e);
@@ -444,7 +427,6 @@ public class RedisMessageStorage implements MessageStorage {
                     }
                 } while (cursor != 0);
                 
-                log.debug("Deleted {} expired messages with status: {}", deletedCount, status);
                 return deletedCount;
             } catch (Exception e) {
                 log.error("Error deleting expired messages from Redis", e);
@@ -463,7 +445,6 @@ public class RedisMessageStorage implements MessageStorage {
                 if (publishedMessage != null) {
                     publishedMessage.setStatus(status);
                     redisTemplate.opsForValue().set(publishedKey, publishedMessage);
-                    log.debug("Updated published message status: {} -> {}", messageId, status);
                     return;
                 }
                 
@@ -473,7 +454,6 @@ public class RedisMessageStorage implements MessageStorage {
                 if (receivedMessage != null) {
                     receivedMessage.setStatus(status);
                     redisTemplate.opsForValue().set(receivedKey, receivedMessage);
-                    log.debug("Updated received message status: {} -> {}", messageId, status);
                 }
             } catch (Exception e) {
                 log.error("Error updating message status in Redis: {}", messageId, e);

@@ -312,7 +312,6 @@ public class CapSubscriberImpl implements CapSubscriber {
                 messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.SUCCEEDED);
                 messageQueue.acknowledge(queueName, message.getId());
 
-                log.debug("Successfully processed message: {}", message.getId());
             } catch (Exception e) {
                 log.error("Failed to process message: {}", message.getId(), e);
                 handleMessageError(message, queueName);
@@ -350,7 +349,6 @@ public class CapSubscriberImpl implements CapSubscriber {
                 messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.SUCCEEDED);
                 messageQueue.acknowledge(queueName, message.getId());
 
-                log.debug("Successfully processed typed message: {} -> {}", message.getId(), result);
             } catch (Exception e) {
                 log.error("Failed to process typed message: {}", message.getId(), e);
                 handleMessageError(message, queueName);
