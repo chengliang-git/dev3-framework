@@ -4,6 +4,7 @@ import com.guanwei.framework.cap.impl.CapPublisherImpl;
 import com.guanwei.framework.cap.impl.CapSubscriberImpl;
 import com.guanwei.framework.cap.impl.CapTransactionManagerImpl;
 import com.guanwei.framework.cap.processor.*;
+import com.guanwei.framework.cap.queue.CapQueueManager;
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PreDestroy;
+import org.springframework.amqp.core.AmqpAdmin;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 
 /**
  * CAP 自动配置类
@@ -52,9 +57,35 @@ public class CapAutoConfiguration {
      * 配置消息队列
      */
     @Bean
-    public MessageQueue messageQueue(CapProperties properties) {
-        // 暂时只使用内存队列
-        return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
+    public MessageQueue messageQueue(CapProperties properties, 
+                                   AmqpAdmin amqpAdmin, 
+                                   RabbitTemplate rabbitTemplate,
+                                   ConnectionFactory connectionFactory) {
+        // 根据配置选择队列类型
+        String queueType = properties.getMessageQueue().getType();
+        switch (queueType.toLowerCase()) {
+            case "memory":
+                return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
+            case "rabbitmq":
+                // 创建队列管理器
+                CapQueueManager capQueueManager = new CapQueueManager(
+                    new RabbitAdmin(connectionFactory),
+                    properties.getMessageQueue().getRabbitmq().getExchangeName(),
+                    properties.getMessageQueue().getRabbitmq().getExchangeType(),
+                    properties.getDefaultGroupName()
+                );
+                return new com.guanwei.framework.cap.queue.RabbitMQMessageQueue(
+                    amqpAdmin, 
+                    rabbitTemplate, 
+                    connectionFactory, 
+                    capQueueManager,
+                    properties.getMessageQueue().getRabbitmq().getExchangeName(),
+                    properties.getMessageQueue().getRabbitmq().getQueuePrefix()
+                );
+            default:
+                log.warn("Unknown queue type: {}, using memory queue", queueType);
+                return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
+        }
     }
 
     /**

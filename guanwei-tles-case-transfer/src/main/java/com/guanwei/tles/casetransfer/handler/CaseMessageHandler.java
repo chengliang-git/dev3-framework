@@ -164,13 +164,113 @@ public class CaseMessageHandler {
             String messageBody = new String(message.getBody());
             log.debug("RabbitMQ收到案件立案消息: {}", messageBody);
 
-            CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
+            // 检查消息头，判断消息格式
+            String messageName = (String) message.getMessageProperties().getHeaders().get("cap-msg-name");
+            String messageId = (String) message.getMessageProperties().getHeaders().get("cap-msg-id");
+            
+            log.debug("消息头信息: messageName={}, messageId={}", messageName, messageId);
 
-            if ("tles.case.filing".equals(capMessage.getName())) {
-                handleCaseFiling(capMessage);
+            if ("tles.case.filing".equals(messageName)) {
+                try {
+                    // 尝试解析为CapMessage格式
+                    CapMessage capMessage = objectMapper.readValue(messageBody, CapMessage.class);
+                    log.debug("成功解析为CapMessage格式: {}", capMessage.getId());
+                    handleCaseFiling(capMessage);
+                } catch (Exception capException) {
+                    log.debug("CapMessage解析失败，尝试解析为业务对象格式: {}", capException.getMessage());
+                    
+                    // 如果CapMessage解析失败，尝试解析为业务对象格式并转换为CapMessage
+                    try {
+                        // 解析业务对象
+                        CaseInfoEntity caseEntity = objectMapper.readValue(messageBody, CaseInfoEntity.class);
+                        log.debug("成功解析为业务对象格式: caseId={}, caseNo={}", caseEntity.getCaseId(), caseEntity.getCaseNo());
+                        
+                        // 将业务对象转换为CapMessage
+                        CapMessage convertedCapMessage = CapMessage.builder()
+                                .id(messageId != null ? messageId : java.util.UUID.randomUUID().toString())
+                                .name(messageName)
+                                .content(messageBody) // 使用原始JSON作为content
+                                .group(messageGroup)
+                                .status(com.guanwei.framework.cap.CapMessageStatus.PENDING)
+                                .retries(0)
+                                .maxRetries(3)
+                                .createdAt(java.time.LocalDateTime.now())
+                                .updatedAt(java.time.LocalDateTime.now())
+                                .sentTime(java.time.LocalDateTime.now())
+                                .messageType(com.guanwei.framework.cap.CapMessage.MessageType.NORMAL)
+                                .build();
+                        
+                        // 初始化消息头
+                        convertedCapMessage.initializeHeaders();
+                        
+                        log.debug("成功转换为CapMessage: id={}, name={}", convertedCapMessage.getId(), convertedCapMessage.getName());
+                        
+                        // 调用业务方法处理
+                        handleCaseFiling(convertedCapMessage);
+                        
+                    } catch (Exception businessException) {
+                        log.error("业务对象解析或转换失败", businessException);
+                        throw new RuntimeException("无法解析或转换消息格式", businessException);
+                    }
+                }
+            } else {
+                log.warn("消息名称不匹配，期望: tles.case.filing, 实际: {}", messageName);
             }
         } catch (Exception e) {
             log.error("RabbitMQ处理案件立案消息失败", e);
+        }
+    }
+
+    /**
+     * RabbitMQ监听器 - 案件违法信息录入（备用方案）
+     * 队列名：tles.case.case-illegal.case-transfer-group
+     */
+    @RabbitListener(queues = "#{caseIllegalQueue.name}")
+    public void handleCaseIllegalRabbitMQ(Message message) {
+        try {
+            String messageBody = new String(message.getBody());
+            log.info("RabbitMQ收到案件违法信息录入消息: {}", messageBody);
+
+            // 检查消息头，判断消息格式
+            String messageName = (String) message.getMessageProperties().getHeaders().get("cap-msg-name");
+            String messageId = (String) message.getMessageProperties().getHeaders().get("cap-msg-id");
+            
+            log.info("消息头信息: messageName={}, messageId={}", messageName, messageId);
+
+            try {
+                // 解析业务对象
+                CaseInfoEntity caseEntity = objectMapper.readValue(messageBody, CaseInfoEntity.class);
+                log.info("成功解析为业务对象格式: caseId={}, caseNo={}", caseEntity.getCaseId(), caseEntity.getCaseNo());
+
+                // 将业务对象转换为CapMessage
+                CapMessage convertedCapMessage = CapMessage.builder()
+                        .id(messageId != null ? messageId : java.util.UUID.randomUUID().toString())
+                        .name(messageName)
+                        .content(messageBody) // 使用原始JSON作为content
+                        .group(messageGroup)
+                        .status(com.guanwei.framework.cap.CapMessageStatus.PENDING)
+                        .retries(0)
+                        .maxRetries(3)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .updatedAt(java.time.LocalDateTime.now())
+                        .sentTime(java.time.LocalDateTime.now())
+                        .messageType(com.guanwei.framework.cap.CapMessage.MessageType.NORMAL)
+                        .build();
+
+                // 初始化消息头
+                convertedCapMessage.initializeHeaders();
+
+                log.info("成功转换为CapMessage: id={}, name={}", convertedCapMessage.getId(), convertedCapMessage.getName());
+
+                // 调用业务方法处理
+                handleCaseIllegal(convertedCapMessage);
+
+            } catch (Exception businessException) {
+                log.error("业务对象解析或转换失败", businessException);
+                throw new RuntimeException("无法解析或转换消息格式", businessException);
+            }
+        } catch (Exception e) {
+            log.error("RabbitMQ处理案件违法信息录入消息失败", e);
         }
     }
 }

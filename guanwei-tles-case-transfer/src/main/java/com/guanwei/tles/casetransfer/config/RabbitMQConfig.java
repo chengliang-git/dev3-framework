@@ -68,6 +68,16 @@ public class RabbitMQConfig {
     }
 
     /**
+     * 案件违法信息录入队列 Bean
+     * 用于 @RabbitListener 注解引用
+     * 队列名称：tles.case.case-illegal.case-transfer-group
+     */
+    @Bean
+    public Queue caseIllegalQueue() {
+        return new Queue("tles.case.case-illegal." + capDefaultGroup, true, false, false);
+    }
+
+    /**
      * 案件修改队列 Bean
      * 用于 @RabbitListener 注解引用
      * 队列名称：case.updated.case-transfer-group
@@ -96,5 +106,16 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(caseFilingQueue())
                 .to(capExchange())
                 .with("tles.case.filing");
+    }
+
+    /**
+     * 绑定案件违法信息录入队列到交换机
+     * 路由键：tles.case.case-illegal
+     */
+    @Bean
+    public Binding caseIllegalBinding() {
+        return BindingBuilder.bind(caseIllegalQueue())
+                .to(capExchange())
+                .with("tles.case.case-illegal");
     }
 }
