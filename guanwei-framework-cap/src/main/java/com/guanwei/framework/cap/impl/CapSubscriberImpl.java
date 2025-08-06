@@ -36,13 +36,13 @@ public class CapSubscriberImpl implements CapSubscriber {
     private ScheduledExecutorService scheduler;
     private volatile boolean running = true;
 
-    public CapSubscriberImpl(MessageStorage messageStorage, MessageQueue messageQueue, 
-                           CapProperties capProperties, CapQueueManager capQueueManager) {
+    public CapSubscriberImpl(MessageStorage messageStorage, MessageQueue messageQueue,
+            CapProperties capProperties, CapQueueManager capQueueManager) {
         this.messageStorage = messageStorage;
         this.messageQueue = messageQueue;
         this.capProperties = capProperties;
         this.capQueueManager = capQueueManager;
-        
+
         // 初始化默认线程池，在@PostConstruct中重新配置
         this.consumerExecutor = Executors.newFixedThreadPool(4);
         this.scheduler = Executors.newScheduledThreadPool(1);
@@ -51,7 +51,7 @@ public class CapSubscriberImpl implements CapSubscriber {
     @PostConstruct
     public void start() {
         log.info("Starting CAP Subscriber...");
-        
+
         try {
             // 重新配置线程池大小
             if (capProperties != null && capProperties.getMessageQueue() != null) {
@@ -98,7 +98,7 @@ public class CapSubscriberImpl implements CapSubscriber {
                         consumerThreads, pollInterval);
             } else {
                 log.warn("CAP Properties not available, using default configuration");
-                
+
                 // 使用默认配置
                 scheduler.scheduleWithFixedDelay(
                         this::consumeMessages,
@@ -116,7 +116,7 @@ public class CapSubscriberImpl implements CapSubscriber {
     public void stop() {
         log.info("Stopping CAP Subscriber...");
         running = false;
-        
+
         if (consumerExecutor != null) {
             consumerExecutor.shutdown();
         }
@@ -153,10 +153,10 @@ public class CapSubscriberImpl implements CapSubscriber {
     public void subscribe(String name, String group, Consumer<CapMessage> handler) {
         String key = buildHandlerKey(name, group);
         handlers.put(key, handler);
-        
+
         // 确保队列存在并正确绑定
         ensureQueueExists(name, group);
-        
+
         log.info("Subscribed to message: {} (group: {})", name, group);
     }
 
@@ -169,10 +169,10 @@ public class CapSubscriberImpl implements CapSubscriber {
     public <T> void subscribe(String name, String group, CapSubscriber.MessageHandler<T> handler) {
         String key = buildHandlerKey(name, group);
         typedHandlers.put(key, handler);
-        
+
         // 确保队列存在并正确绑定
         ensureQueueExists(name, group);
-        
+
         log.info("Subscribed to typed message: {} (group: {})", name, group);
     }
 
@@ -198,10 +198,10 @@ public class CapSubscriberImpl implements CapSubscriber {
             if (capQueueManager != null) {
                 // 使用队列管理器创建队列并绑定
                 String queueName = capQueueManager.createQueueAndBind(messageName, group);
-                log.info("Ensured queue exists and bound: {} for message: {} (group: {})", 
+                log.info("Ensured queue exists and bound: {} for message: {} (group: {})",
                         queueName, messageName, group);
             } else {
-                log.debug("Queue manager not available, queue will be created when first message is sent");
+                log.warn("Queue manager not available, queue will be created when first message is sent");
             }
         } catch (Exception e) {
             log.error("Failed to ensure queue exists for message: {} (group: {})", messageName, group, e);
@@ -412,12 +412,13 @@ public class CapSubscriberImpl implements CapSubscriber {
 
     /**
      * 构建队列名称
-     * 参考 GitHub CAP 源码：routeKey + "." + groupName
+     * 参考 .NET CAP 源码：TopicName + "." + GroupName
      */
     private String buildQueueName(String name, String group) {
         if (capQueueManager != null) {
             return capQueueManager.buildQueueName(name, group);
         }
+        // 按照.NET CAP标准：TopicName.GroupName
         return name + "." + group;
     }
 }

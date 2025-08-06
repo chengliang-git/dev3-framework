@@ -17,6 +17,11 @@ import jakarta.annotation.PostConstruct;
  * 使用 @CapSubscribe 注解实现订阅，CAP框架会自动创建队列和处理消息
  * 参考 .NET Core CAP 组件的订阅方式
  * 
+ * 配置说明：
+ * - 业务系统指定交换机名称：tles.case-biz
+ * - 队列名称格式：GroupName.Version（如：case-transfer-group.v1）
+ * - 路由键使用消息主题名称
+ * 
  * @author Guanwei Framework
  * @since 1.0.0
  */
@@ -30,7 +35,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件立案消息
-     * CAP框架会自动创建队列：tles.case.filing.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case.filing", group = "case-transfer-group")
     public void handleCaseFiling(CapMessage capMessage) {
@@ -49,7 +54,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件调查报告消息
-     * CAP框架会自动创建队列：tles.case-handling-opinion.finnal-review.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case-handling-opinion.finnal-review", group = "case-transfer-group")
     public void handleCaseHandleFinalReview(CapMessage capMessage) {
@@ -69,7 +74,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件违法信息录入消息
-     * CAP框架会自动创建队列：tles.case.case-illegal.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case.case-illegal", group = "case-transfer-group")
     public void handleCaseIllegal(CapMessage capMessage) {
@@ -95,7 +100,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件行政处罚决定消息
-     * CAP框架会自动创建队列：tles.case.admin-penalty-decision.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case.admin-penalty-decision", group = "case-transfer-group")
     public void handleCaseAdminPenaltyDecision(CapMessage capMessage) {
@@ -117,7 +122,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件结案消息
-     * CAP框架会自动创建队列：tles.case.closed.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case.closed", group = "case-transfer-group")
     public void handleCaseClosed(CapMessage capMessage) {
@@ -139,7 +144,7 @@ public class CaseMessageHandler {
 
     /**
      * 处理案件撤销消息
-     * CAP框架会自动创建队列：tles.case.case-cancel.case-transfer-group
+     * CAP框架会自动创建队列：case-transfer-group.v1
      */
     @CapSubscribe(value = "tles.case.case-cancel", group = "case-transfer-group")
     public void handleCaseCanceled(CapMessage capMessage) {

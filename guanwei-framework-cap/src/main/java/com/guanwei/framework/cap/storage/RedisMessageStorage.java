@@ -110,10 +110,10 @@ public class RedisMessageStorage implements MessageStorage {
     }
 
     @Override
-    public CompletableFuture<Void> changePublishStateToDelayedAsync(List<String> ids) {
+    public CompletableFuture<Void> changePublishStateToDelayedAsync(List<Long> ids) {
         return CompletableFuture.runAsync(() -> {
             try {
-                for (String id : ids) {
+                for (Long id : ids) {
                     String key = PUBLISHED_PREFIX + id;
                     CapMessage message = (CapMessage) redisTemplate.opsForValue().get(key);
                     if (message != null) {
@@ -164,7 +164,7 @@ public class RedisMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String id = "msg_" + System.currentTimeMillis() + "_" + System.nanoTime();
+                Long id = System.currentTimeMillis() + System.nanoTime();
                 CapMessage message = new CapMessage(name, content);
                 message.setDbId(id);
                 message.setStatus(CapMessageStatus.SCHEDULED);
@@ -187,7 +187,7 @@ public class RedisMessageStorage implements MessageStorage {
     public CompletableFuture<Void> storeReceivedExceptionMessageAsync(String name, String group, String content) {
         return CompletableFuture.runAsync(() -> {
             try {
-                String id = "exc_" + System.currentTimeMillis() + "_" + System.nanoTime();
+                Long id = System.currentTimeMillis() + System.nanoTime();
                 String key = EXCEPTION_PREFIX + id;
                 
                 CapMessage exceptionMessage = new CapMessage(name, group, content);
@@ -207,7 +207,7 @@ public class RedisMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeReceivedMessageAsync(String name, String group, Object content) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String id = "recv_" + System.currentTimeMillis() + "_" + System.nanoTime();
+                Long id = System.currentTimeMillis() + System.nanoTime();
                 CapMessage message = new CapMessage(name, group, content);
                 message.setDbId(id);
                 message.setStatus(CapMessageStatus.SCHEDULED);
@@ -454,7 +454,7 @@ public class RedisMessageStorage implements MessageStorage {
     }
 
     @Override
-    public CompletableFuture<Void> updateStatusAsync(String messageId, CapMessageStatus status) {
+    public CompletableFuture<Void> updateStatusAsync(Long messageId, CapMessageStatus status) {
         return CompletableFuture.runAsync(() -> {
             try {
                 // 尝试更新已发布消息

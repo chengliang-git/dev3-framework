@@ -49,7 +49,7 @@ public interface MessageStorage {
      * @param ids 消息ID列表
      * @return 操作结果
      */
-    CompletableFuture<Void> changePublishStateToDelayedAsync(List<String> ids);
+    CompletableFuture<Void> changePublishStateToDelayedAsync(List<Long> ids);
 
     /**
      * 更改发布消息状态
@@ -168,7 +168,7 @@ public interface MessageStorage {
     /**
      * 更新消息状态（通用）
      */
-    CompletableFuture<Void> updateStatusAsync(String messageId, CapMessageStatus status);
+    CompletableFuture<Void> updateStatusAsync(Long messageId, CapMessageStatus status);
 
     /**
      * 删除指定状态的过期消息

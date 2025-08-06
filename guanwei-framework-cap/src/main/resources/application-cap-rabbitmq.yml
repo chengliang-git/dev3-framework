@@ -9,7 +9,7 @@ cap:
     database:
       # 连接配置继承自spring.datasource，无需重复配置
       # url, username, password, driver-class-name 都从spring.datasource读取
-      
+
       # CAP特有的配置
       schema: "CAP"
       table-prefix: "CAP_"
@@ -20,6 +20,13 @@ cap:
   # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
   message-queue:
     type: "rabbitmq"
+    rabbitmq:
+      # 交换机名称（由业务系统直接指定）
+      exchange-name: "cap.business"
+      # 交换机类型
+      exchange-type: "topic"
+      # 队列前缀
+      queue-prefix: "cap_"
     # 连接配置继承自spring.rabbitmq，无需重复配置
     # host, port, username, password, virtual-host 都从spring.rabbitmq读取
 
@@ -45,8 +52,8 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1 FROM DUAL
 
-# RabbitMQ 连接配置
-# 这是Spring RabbitMQ的标准配置，CAP框架会自动使用这些连接信息
+  # RabbitMQ 连接配置
+  # 这是Spring RabbitMQ的标准配置，CAP框架会自动使用这些连接信息
   rabbitmq:
     host: localhost
     port: 5672

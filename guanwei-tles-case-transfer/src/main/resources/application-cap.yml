@@ -3,7 +3,7 @@ cap:
   enabled: true
   default-group: "case-transfer-group"
   version: "v1"
-  
+
   # 消息存储配置 - Oracle
   # 注意：连接配置使用spring.datasource，这里只配置CAP特有的设置
   storage:
@@ -11,46 +11,48 @@ cap:
     database:
       # 连接配置继承自spring.datasource，无需重复配置
       # connection-string, username, password 都从spring.datasource读取
-      
+
       # CAP特有的配置
       schema: "${ORACLE_SCHEMA:CAP}"
       table-prefix: "CAP_"
-  
+
   # 消息队列配置 - RabbitMQ
   # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
   message-queue:
     type: "rabbitmq"
     rabbitmq:
-      # 指定要绑定的交换机名称
-      exchange-name: "tles.case-biz.case-v1"
+      # 交换机名称（由业务系统直接指定）
+      exchange-name: "tles.case-biz"
+      # 交换机类型
       exchange-type: "topic"
+      # 队列前缀
       queue-prefix: "cap_"
     # 连接配置继承自spring.rabbitmq，无需重复配置
     # host, port, username, password, virtual-host 都从spring.rabbitmq读取
-  
+
   # 消费者配置
   consumer-thread-count: 10
   enable-subscriber-parallel-execute: true
   subscriber-parallel-execute-thread-count: 5
   subscriber-parallel-execute-buffer-factor: 1
-  
+
   # 发布者配置
   enable-publish-parallel-send: true
-  
+
   # 消息过期配置
-  succeed-message-expired-after: 86400  # 成功消息24小时后过期
-  failed-message-expired-after: 259200  # 失败消息3天后过期
-  
+  succeed-message-expired-after: 86400 # 成功消息24小时后过期
+  failed-message-expired-after: 259200 # 失败消息3天后过期
+
   # 重试配置
-  failed-retry-interval: 60  # 失败重试间隔60秒
-  failed-retry-count: 3      # 最大重试次数3次
-  
+  failed-retry-interval: 60 # 失败重试间隔60秒
+  failed-retry-count: 3 # 最大重试次数3次
+
   # 清理配置
-  collector-cleaning-interval: 3600  # 清理间隔1小时
-  scheduler-batch-size: 100          # 调度批处理大小
-  
+  collector-cleaning-interval: 3600 # 清理间隔1小时
+  scheduler-batch-size: 100 # 调度批处理大小
+
   # 分布式锁配置
   use-storage-lock: true
-  
+
   # 回退窗口配置
-  fallback-window-lookback-seconds: 300 
+  fallback-window-lookback-seconds: 300

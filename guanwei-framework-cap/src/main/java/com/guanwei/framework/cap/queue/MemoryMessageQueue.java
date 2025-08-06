@@ -116,14 +116,14 @@ public class MemoryMessageQueue implements MessageQueue {
     }
 
     @Override
-    public boolean acknowledge(String queueName, String messageId) {
+    public boolean acknowledge(String queueName, Long messageId) {
         // 内存队列中，消息一旦被接收就被确认，这里只是记录日志
         log.debug("Acknowledged message {} from queue {}", messageId, queueName);
         return true;
     }
 
     @Override
-    public boolean reject(String queueName, String messageId, boolean requeue) {
+    public boolean reject(String queueName, Long messageId, boolean requeue) {
         if (requeue) {
             // 重新入队逻辑，这里简化处理
             log.debug("Rejected and requeued message {} to queue {}", messageId, queueName);
@@ -213,7 +213,7 @@ public class MemoryMessageQueue implements MessageQueue {
     /**
      * 生成消息ID
      */
-    private String generateMessageId() {
-        return "msg_" + System.currentTimeMillis() + "_" + messageIdCounter.incrementAndGet();
+    private Long generateMessageId() {
+        return System.currentTimeMillis() + messageIdCounter.incrementAndGet();
     }
 }

@@ -226,7 +226,7 @@ public class CapProperties {
     @Data
     public static class RabbitMQ {
         /**
-         * 交换机名称
+         * 交换机名称（由业务系统直接指定，如：tles.case-biz）
          */
         private String exchangeName = "cap.exchange";
 

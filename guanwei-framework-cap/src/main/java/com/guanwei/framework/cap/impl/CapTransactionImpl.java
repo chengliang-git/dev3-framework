@@ -29,7 +29,7 @@ public class CapTransactionImpl implements CapTransaction {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public CapTransactionImpl(Object dbTransaction, long timeout) {
-        this.transactionId = java.util.UUID.randomUUID().toString();
+        this.transactionId = String.valueOf(System.currentTimeMillis() + Thread.currentThread().getId());
         this.startTime = System.currentTimeMillis();
         this.timeout = timeout;
         this.dbTransaction = dbTransaction;

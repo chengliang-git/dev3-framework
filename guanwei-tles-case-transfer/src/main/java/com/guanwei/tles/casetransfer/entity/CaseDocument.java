@@ -1,13 +1,12 @@
 package com.guanwei.tles.casetransfer.entity;
 
 import lombok.Data;
-import org.springframework.data.mongodb.core.mapping.Field;
+// import org.springframework.data.mongodb.core.mapping.Field; // 暂时禁用MongoDB
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 案件文件实体类
+ * 案件文件实体类 - MongoDB功能暂时禁用
  * 
  * @author Guanwei Framework
  * @since 1.0.0
@@ -16,44 +15,50 @@ import java.time.LocalDateTime;
 public class CaseDocument {
 
     /**
-     * 附件Id
+     * 文件ID
      */
-    @Field("attachId")
-    private String attachId;
+    // @Field("documentId") // 暂时禁用MongoDB
+    private String documentId;
 
     /**
-     * 附件名称
+     * 文件名
      */
-    @Field("attachName")
-    private String attachName;
+    // @Field("fileName") // 暂时禁用MongoDB
+    private String fileName;
 
     /**
-     * 相对路径
+     * 文件路径
      */
-    @Field("filePath")
+    // @Field("filePath") // 暂时禁用MongoDB
     private String filePath;
 
     /**
-     * 文件大小(KB)
+     * 文件大小（字节）
      */
-    @Field("fileSize")
-    private BigDecimal fileSize;
+    // @Field("fileSize") // 暂时禁用MongoDB
+    private Long fileSize;
 
     /**
-     * 文件类型(后缀名)
+     * 文件类型
      */
-    @Field("fileType")
+    // @Field("fileType") // 暂时禁用MongoDB
     private String fileType;
 
     /**
-     * 案件或证据Id
+     * 文件描述
      */
-    @Field("objectId")
-    private String objectId;
+    // @Field("description") // 暂时禁用MongoDB
+    private String description;
 
     /**
-     * 附件分类
+     * 上传时间
      */
-    @Field("attachCategory")
-    private Integer attachCategory;
+    // @Field("uploadTime") // 暂时禁用MongoDB
+    private LocalDateTime uploadTime;
+
+    /**
+     * 上传人
+     */
+    // @Field("uploader") // 暂时禁用MongoDB
+    private String uploader;
 } 

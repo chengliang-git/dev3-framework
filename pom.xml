@@ -120,6 +120,13 @@
                 <version>${oracle.version}</version>
             </dependency>
 
+            <!-- Oracle国际化支持 -->
+            <dependency>
+                <groupId>com.oracle.database.nls</groupId>
+                <artifactId>orai18n</artifactId>
+                <version>${oracle.version}</version>
+            </dependency>
+
             <!-- JWT -->
             <dependency>
                 <groupId>com.auth0</groupId>

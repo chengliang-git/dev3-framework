@@ -285,7 +285,7 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
             // 创建CapMessage，将原始JSON作为content
             String content = jsonNode.toString();
-            String messageId = java.util.UUID.randomUUID().toString();
+            Long messageId = System.currentTimeMillis() + Thread.currentThread().getId();
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
             log.debug("创建CapMessage: id={}, name={}, group={}, content长度={}",
@@ -337,13 +337,13 @@ public class RabbitMQMessageQueue implements MessageQueue {
     }
 
     @Override
-    public boolean acknowledge(String queueName, String messageId) {
+    public boolean acknowledge(String queueName, Long messageId) {
         // RabbitMQ的确认机制由监听器容器处理
         return true;
     }
 
     @Override
-    public boolean reject(String queueName, String messageId, boolean requeue) {
+    public boolean reject(String queueName, Long messageId, boolean requeue) {
         return true;
     }
 
@@ -397,13 +397,13 @@ public class RabbitMQMessageQueue implements MessageQueue {
 
     /**
      * 构建队列名称
-     * 参考 GitHub CAP 源码：routeKey + "." + groupName
+     * 参考 .NET CAP 源码：TopicName + "." + GroupName
      */
     public String buildQueueName(String messageName, String group) {
         if (capQueueManager != null) {
             return capQueueManager.buildQueueName(messageName, group);
         }
-        // 如果capQueueManager为null，使用默认的队列名称构建方式
+        // 按照.NET CAP标准：TopicName.GroupName
         return messageName + "." + group;
     }
 

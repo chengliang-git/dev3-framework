@@ -67,7 +67,7 @@ public class CapMessage {
     /**
      * 数据库ID
      */
-    private String dbId;
+    private Long dbId;
 
     /**
      * 消息名称
@@ -142,7 +142,7 @@ public class CapMessage {
     public static class Builder {
         private CapMessage message = new CapMessage();
 
-        public Builder id(String id) {
+        public Builder id(Long id) {
             message.setDbId(id);
             return this;
         }
@@ -247,7 +247,7 @@ public class CapMessage {
      *
      * @return 消息ID
      */
-    public String getId() {
+    public Long getId() {
         return dbId;
     }
 

@@ -62,7 +62,8 @@ public class CapAutoConfiguration {
                 new RabbitAdmin(connectionFactory),
                 properties.getMessageQueue().getRabbitmq().getExchangeName(),
                 properties.getMessageQueue().getRabbitmq().getExchangeType(),
-                properties.getDefaultGroupName());
+                properties.getDefaultGroupName(),
+                properties.getVersion());
     }
 
     /**
@@ -99,6 +100,14 @@ public class CapAutoConfiguration {
     @Bean
     public CapSubscriberProcessor capSubscriberProcessor(CapSubscriber capSubscriber) {
         return new CapSubscriberProcessor(capSubscriber);
+    }
+
+    /**
+     * 配置CAP订阅注解处理器
+     */
+    @Bean
+    public CapSubscribeProcessor capSubscribeProcessor() {
+        return new CapSubscribeProcessor();
     }
 
     /**

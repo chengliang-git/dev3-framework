@@ -33,7 +33,7 @@ public class CapMessageController {
     @PostMapping("/send/case-created")
     public Map<String, Object> sendCaseCreated(@RequestBody CaseMessage caseMessage) {
         try {
-            String messageId = capPublisher.publish("tles.case.filing", caseMessage, "case-transfer-group");
+            Long messageId = capPublisher.publish("tles.case.filing", caseMessage, "case-transfer-group");
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -57,7 +57,7 @@ public class CapMessageController {
     @PostMapping("/send/case-updated")
     public Map<String, Object> sendCaseUpdated(@RequestBody CaseMessage caseMessage) {
         try {
-            String messageId = capPublisher.publish("case.updated", caseMessage, "case-transfer-group");
+            Long messageId = capPublisher.publish("case.updated", caseMessage, "case-transfer-group");
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -81,7 +81,7 @@ public class CapMessageController {
     @PostMapping("/send/case-illegal")
     public Map<String, Object> sendCaseIllegal(@RequestBody Map<String, Object> caseData) {
         try {
-            String messageId = capPublisher.publish("tles.case.case-illegal", caseData, "case-transfer-group");
+            Long messageId = capPublisher.publish("tles.case.case-illegal", caseData, "case-transfer-group");
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -105,7 +105,7 @@ public class CapMessageController {
     @PostMapping("/send/case-deleted")
     public Map<String, Object> sendCaseDeleted(@RequestBody CaseMessage caseMessage) {
         try {
-            String messageId = capPublisher.publish("case.deleted", caseMessage, "case-transfer-group");
+            Long messageId = capPublisher.publish("case.deleted", caseMessage, "case-transfer-group");
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);

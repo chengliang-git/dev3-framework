@@ -89,13 +89,8 @@
             companyPost,
             isSelfEmployed,
             ownerName,
-            registCode,
-            createTime,
-            modifyTime,
-            creator,
-            modifier,
-            delFlag
-        FROM CASE_PERSONAL
+            registCode
+        FROM LE_CasePersonal
         WHERE caseId = #{caseId} 
         AND delFlag = 0
     </select>
@@ -121,11 +116,7 @@
             issueOrg,
             legalPost,
             legalIdCertType,
-            registCode,
-            createTime,
-            modifyTime,
-            creator,
-            modifier
+            registCode
         FROM LE_CaseCompany
         WHERE caseId = #{caseId}
     </select>

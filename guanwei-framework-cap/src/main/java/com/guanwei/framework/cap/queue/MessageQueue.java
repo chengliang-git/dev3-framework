@@ -65,7 +65,7 @@ public interface MessageQueue {
      * @param messageId 消息ID
      * @return 是否确认成功
      */
-    boolean acknowledge(String queueName, String messageId);
+    boolean acknowledge(String queueName, Long messageId);
 
     /**
      * 拒绝消息（重新入队）
@@ -75,7 +75,7 @@ public interface MessageQueue {
      * @param requeue   是否重新入队
      * @return 是否拒绝成功
      */
-    boolean reject(String queueName, String messageId, boolean requeue);
+    boolean reject(String queueName, Long messageId, boolean requeue);
 
     /**
      * 获取队列长度

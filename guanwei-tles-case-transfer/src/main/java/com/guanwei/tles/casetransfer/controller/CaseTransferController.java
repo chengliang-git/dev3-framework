@@ -1,8 +1,8 @@
 package com.guanwei.tles.casetransfer.controller;
 
-import com.guanwei.framework.common.controller.BaseMongoController;
+// import com.guanwei.framework.common.controller.BaseMongoController; // 暂时禁用MongoDB
 import com.guanwei.framework.common.result.Result;
-import com.guanwei.tles.casetransfer.entity.Case;
+//import com.guanwei.tles.casetransfer.entity.Case;
 import com.guanwei.tles.casetransfer.service.CaseTransferService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 案件转存控制器
+ * 案件转存控制器 - MongoDB功能暂时禁用
  * 
  * @author Guanwei Framework
  * @since 1.0.0
@@ -22,19 +22,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/case-transfer")
 @RequiredArgsConstructor
 @Tag(name = "案件转存管理", description = "案件数据转存相关接口")
-public class CaseTransferController extends BaseMongoController<CaseTransferService, Case> {
+public class CaseTransferController {
 
     private final CaseTransferService caseTransferService;
 
-    protected CaseTransferService getService() {
-        return caseTransferService;
-    }
-
     @PostMapping("/sync/{caseId}")
-    @Operation(summary = "手动同步案件数据", description = "手动同步指定案件数据到MongoDB")
+    @Operation(summary = "手动同步案件数据", description = "手动同步指定案件数据到MongoDB（暂时禁用）")
     public Result<Void> syncCase(
             @Parameter(description = "案件ID", required = true) @PathVariable String caseId) {
-        log.info("手动同步案件数据: {}", caseId);
+        log.info("手动同步案件数据: {} (MongoDB功能暂时禁用)", caseId);
         caseTransferService.syncCaseToMongoDB(caseId);
         return Result.success();
     }
@@ -42,6 +38,6 @@ public class CaseTransferController extends BaseMongoController<CaseTransferServ
     @GetMapping("/health")
     @Operation(summary = "健康检查", description = "检查服务运行状态")
     public Result<String> health() {
-        return Result.success("案件转存服务运行正常");
+        return Result.success("案件转存服务运行正常（MongoDB功能暂时禁用）");
     }
 }

@@ -2,6 +2,7 @@ package com.guanwei.framework.cap.processor;
 
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.annotation.CapSubscribe;
+import com.guanwei.framework.cap.queue.CapQueueManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,17 +32,22 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
     private boolean initialized = false;
 
     public CapSubscribeProcessor() {
-        // 使用延迟注入避免循环依赖
+        log.info("CapSubscribeProcessor constructor called");
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        log.info("CapSubscribeProcessor setApplicationContext called");
         this.applicationContext = applicationContext;
     }
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
+        log.info("CapSubscribeProcessor onApplicationEvent called, initialized: {}, event context: {}", 
+                initialized, event.getApplicationContext().getDisplayName());
+        
         if (initialized || event.getApplicationContext() != applicationContext) {
+            log.info("CapSubscribeProcessor skipping initialization - already initialized or different context");
             return;
         }
 
@@ -53,6 +59,7 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
      * 手动触发初始化（用于测试或特殊情况）
      */
     public void initialize() {
+        log.info("CapSubscribeProcessor manual initialize called");
         if (!initialized && applicationContext != null) {
             initializeAfterContextRefresh();
         }
@@ -69,13 +76,15 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
      * 在上下文刷新后初始化
      */
     private void initializeAfterContextRefresh() {
+        log.info("CapSubscribeProcessor initializeAfterContextRefresh started");
         try {
             // 获取 subscriberProcessor
             if (subscriberProcessor == null) {
                 try {
                     this.subscriberProcessor = applicationContext.getBean(CapSubscriberProcessor.class);
+                    log.info("CapSubscribeProcessor successfully got CapSubscriberProcessor bean");
                 } catch (Exception e) {
-                    log.warn("CapSubscriberProcessor not available yet, will retry later");
+                    log.warn("CapSubscriberProcessor not available yet, will retry later", e);
                 }
             }
 
@@ -85,7 +94,7 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
             registerPendingHandlers();
 
             initialized = true;
-            log.info("CapSubscribeProcessor initialized successfully");
+            log.info("CapSubscribeProcessor initialized successfully with {} handlers", handlers.size());
         } catch (Exception e) {
             log.error("Failed to initialize CapSubscribeProcessor", e);
         }
@@ -95,9 +104,12 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
      * 扫描订阅方法
      */
     private void scanSubscribeMethods() {
+        log.info("CapSubscribeProcessor scanSubscribeMethods started");
         String[] beanNames = applicationContext.getBeanDefinitionNames();
         int scannedCount = 0;
         int handlerCount = 0;
+
+        log.info("CapSubscribeProcessor found {} bean definitions", beanNames.length);
 
         for (String beanName : beanNames) {
             try {
@@ -113,11 +125,13 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
                     Class<?> beanClass = bean.getClass();
                     scannedCount++;
 
+                    log.debug("Scanning bean: {} of type: {}", beanName, beanClass.getSimpleName());
+
                     // 扫描所有带有@CapSubscribe注解的方法
                     int handlersInBean = scanMethodsForSubscribe(bean, beanClass);
                     handlerCount += handlersInBean;
                     if (handlersInBean > 0) {
-                        log.debug("Found {} handlers in bean: {}", handlersInBean, beanName);
+                        log.info("Found {} handlers in bean: {}", handlersInBean, beanName);
                     }
                 } else {
                     // 如果Bean还没有创建，跳过它，等待后续扫描
@@ -129,7 +143,7 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
             }
         }
 
-        log.info("Scanned {} beans, found {} subscribe handlers", scannedCount, handlerCount);
+        log.info("CapSubscribeProcessor scanned {} beans, found {} subscribe handlers", scannedCount, handlerCount);
     }
 
     /**
@@ -169,14 +183,47 @@ public class CapSubscribeProcessor implements ApplicationContextAware, Applicati
         SubscribeHandler handler = new SubscribeHandler(bean, method, annotation);
         handlers.put(handlerKey, handler);
 
+        log.info("Registered subscribe handler: {} -> {}.{} (message: {}, group: {})", 
+                handlerKey, bean.getClass().getSimpleName(), method.getName(), messageName, group);
+
+        // 立即创建队列（如果队列管理器可用）
+        createQueueIfNeeded(messageName, group);
+
         // 注册到订阅者处理器（延迟注册，避免循环依赖）
         if (subscriberProcessor != null) {
             subscriberProcessor.registerHandler(messageName, group, handler);
-            log.info("Registered subscribe handler: {} -> {}.{}", handlerKey, bean.getClass().getSimpleName(),
-                    method.getName());
+            log.info("Successfully registered handler to subscriber processor: {} -> {}.{}", 
+                    handlerKey, bean.getClass().getSimpleName(), method.getName());
         } else {
             log.warn("SubscriberProcessor not available yet, handler will be registered later: {} -> {}.{}",
                     handlerKey, bean.getClass().getSimpleName(), method.getName());
+        }
+    }
+
+    /**
+     * 创建队列（如果需要）
+     */
+    private void createQueueIfNeeded(String messageName, String group) {
+        log.info("CapSubscribeProcessor createQueueIfNeeded called for message: {} (group: {})", messageName, group);
+        try {
+            // 尝试获取队列管理器
+            if (applicationContext != null) {
+                try {
+                    CapQueueManager queueManager = applicationContext.getBean(CapQueueManager.class);
+                    if (queueManager != null) {
+                        String queueName = queueManager.createQueueAndBind(messageName, group);
+                        log.info("Successfully created queue for subscription: {} (group: {}) -> {}", messageName, group, queueName);
+                    } else {
+                        log.warn("Queue manager is null");
+                    }
+                } catch (Exception e) {
+                    log.warn("Queue manager not available yet, queue will be created later: {} - {}", messageName, e.getMessage());
+                }
+            } else {
+                log.warn("ApplicationContext is null, cannot create queue");
+            }
+        } catch (Exception e) {
+            log.error("Failed to create queue for subscription: {} (group: {})", messageName, group, e);
         }
     }
 

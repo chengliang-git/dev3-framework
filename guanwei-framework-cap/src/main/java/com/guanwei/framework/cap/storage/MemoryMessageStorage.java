@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MemoryMessageStorage implements MessageStorage {
 
-    private final Map<String, CapMessage> publishedMessages = new ConcurrentHashMap<>();
-    private final Map<String, CapMessage> receivedMessages = new ConcurrentHashMap<>();
+    private final Map<Long, CapMessage> publishedMessages = new ConcurrentHashMap<>();
+    private final Map<Long, CapMessage> receivedMessages = new ConcurrentHashMap<>();
     private final Map<String, LockInfo> locks = new ConcurrentHashMap<>();
     private final AtomicLong messageIdCounter = new AtomicLong(0);
 
@@ -76,10 +76,10 @@ public class MemoryMessageStorage implements MessageStorage {
     }
 
     @Override
-    public CompletableFuture<Void> changePublishStateToDelayedAsync(List<String> ids) {
+    public CompletableFuture<Void> changePublishStateToDelayedAsync(List<Long> ids) {
         return CompletableFuture.runAsync(() -> {
             try {
-                for (String id : ids) {
+                for (Long id : ids) {
                     CapMessage message = publishedMessages.get(id);
                     if (message != null) {
                         message.setStatus(CapMessageStatus.DELAYED);
@@ -130,7 +130,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String id = generateMessageId();
+                Long id = generateMessageId();
                 CapMessage message = new CapMessage(name, content);
                 message.setDbId(id);
                 message.setStatus(CapMessageStatus.SCHEDULED);
@@ -151,7 +151,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<Void> storeReceivedExceptionMessageAsync(String name, String group, String content) {
         return CompletableFuture.runAsync(() -> {
             try {
-                String id = generateMessageId();
+                Long id = generateMessageId();
                 CapMessage exceptionMessage = new CapMessage(name, group, content);
                 exceptionMessage.setDbId(id);
                 exceptionMessage.setStatus(CapMessageStatus.FAILED);
@@ -169,7 +169,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeReceivedMessageAsync(String name, String group, Object content) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String id = generateMessageId();
+                Long id = generateMessageId();
                 CapMessage message = new CapMessage(name, group, content);
                 message.setDbId(id);
                 message.setStatus(CapMessageStatus.SCHEDULED);
@@ -190,7 +190,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<Integer> deleteExpiresAsync(String table, LocalDateTime timeout, int batchCount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Map<String, CapMessage> messageMap = "published".equals(table) ? publishedMessages : receivedMessages;
+                Map<Long, CapMessage> messageMap = "published".equals(table) ? publishedMessages : receivedMessages;
                 return deleteExpiredMessages(messageMap, timeout, batchCount);
             } catch (Exception e) {
                 log.error("Error deleting expired messages", e);
@@ -312,7 +312,7 @@ public class MemoryMessageStorage implements MessageStorage {
     }
 
     @Override
-    public CompletableFuture<Void> updateStatusAsync(String messageId, CapMessageStatus status) {
+    public CompletableFuture<Void> updateStatusAsync(Long messageId, CapMessageStatus status) {
         return CompletableFuture.runAsync(() -> {
             try {
                 // 尝试更新已发布消息
@@ -335,11 +335,11 @@ public class MemoryMessageStorage implements MessageStorage {
         });
     }
 
-    private int deleteExpiredMessages(Map<String, CapMessage> messageMap, LocalDateTime timeout, int batchCount) {
+    private int deleteExpiredMessages(Map<Long, CapMessage> messageMap, LocalDateTime timeout, int batchCount) {
         int deletedCount = 0;
         int processedCount = 0;
         
-        for (Map.Entry<String, CapMessage> entry : messageMap.entrySet()) {
+        for (Map.Entry<Long, CapMessage> entry : messageMap.entrySet()) {
             if (processedCount >= batchCount) {
                 break;
             }
@@ -356,8 +356,8 @@ public class MemoryMessageStorage implements MessageStorage {
         return deletedCount;
     }
 
-    private String generateMessageId() {
-        return "msg_" + System.currentTimeMillis() + "_" + messageIdCounter.incrementAndGet();
+    private Long generateMessageId() {
+        return System.currentTimeMillis() + messageIdCounter.incrementAndGet();
     }
 
     private static class LockInfo {

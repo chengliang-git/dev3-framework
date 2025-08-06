@@ -1,16 +1,16 @@
 package com.guanwei.tles.casetransfer.service;
 
-import com.guanwei.framework.common.service.BaseMongoService;
-import com.guanwei.tles.casetransfer.entity.Case;
+// import com.guanwei.framework.common.service.BaseMongoService; // 暂时禁用MongoDB
+//import com.guanwei.tles.casetransfer.entity.Case;
 import com.guanwei.tles.casetransfer.entity.oracle.CaseInfoEntity;
 
 /**
- * 案件转存服务接口
+ * 案件转存服务接口 - MongoDB功能暂时禁用
  * 
  * @author Guanwei Framework
  * @since 1.0.0
  */
-public interface CaseTransferService extends BaseMongoService<Case> {
+public interface CaseTransferService {
 
     /**
      * 处理案件新增消息
@@ -34,9 +34,9 @@ public interface CaseTransferService extends BaseMongoService<Case> {
     void handleCaseDeleted(CaseInfoEntity caseEntity);
 
     /**
-     * 同步案件数据到MongoDB
+     * 同步案件数据到MongoDB（暂时禁用）
      * 
      * @param caseId 案件ID
      */
     void syncCaseToMongoDB(String caseId);
-} 
+}

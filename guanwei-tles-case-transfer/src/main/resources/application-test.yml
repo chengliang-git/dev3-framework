@@ -1,18 +1,25 @@
 spring:
-  # MongoDB配置（开发环境）
+  # MongoDB配置（测试环境）- 暂时禁用
+  # data:
+  #   mongodb:
+  #     host: 10.56.1.60
+  #     port: 27017
+  #     database: dlzf
+  #     username: caseuser
+  #     password: Guanwei#123
+  #     authentication-database: dlzf
   data:
-    mongodb:
-      host: 10.56.1.60
-      port: 27017
-      database: dlzf
-      username: caseuser
-      password: Guanwei#123
-      authentication-database: dlzf
     redis:
       host: 10.56.2.203
       port: 6381
       password: Zhongjj#12_45
       database: 0
+
+  # 禁用MongoDB自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 
   # Oracle数据源配置（202测试环境）
   datasource:

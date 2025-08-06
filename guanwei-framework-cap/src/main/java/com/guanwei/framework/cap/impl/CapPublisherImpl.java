@@ -43,163 +43,163 @@ public class CapPublisherImpl implements CapPublisher {
     }
 
     @Override
-    public String publish(String name, Object content) {
+    public Long publish(String name, Object content) {
         return publish(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default");
     }
 
     @Override
-    public String publish(String name, Object content, String group) {
+    public Long publish(String name, Object content, String group) {
         return publishInternal(name, content, null, group, null, false);
     }
 
     @Override
-    public String publish(String name, Object content, String callbackName, String group) {
+    public Long publish(String name, Object content, String callbackName, String group) {
         return publishInternal(name, content, callbackName, group, null, false);
     }
 
     @Override
-    public String publish(String name, Object content, Map<String, String> headers) {
+    public Long publish(String name, Object content, Map<String, String> headers) {
         return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, false);
     }
 
     @Override
-    public String publish(String name, Object content, Map<String, String> headers, String group) {
+    public Long publish(String name, Object content, Map<String, String> headers, String group) {
         return publishInternal(name, content, null, group, headers, false);
     }
 
     @Override
-    public CompletableFuture<String> publishAsync(String name, Object content) {
+    public CompletableFuture<Long> publishAsync(String name, Object content) {
         return CompletableFuture.supplyAsync(() -> publish(name, content));
     }
 
     @Override
-    public CompletableFuture<String> publishAsync(String name, Object content, String group) {
+    public CompletableFuture<Long> publishAsync(String name, Object content, String group) {
         return CompletableFuture.supplyAsync(() -> publish(name, content, group));
     }
 
     @Override
-    public CompletableFuture<String> publishAsync(String name, Object content, String callbackName, String group) {
+    public CompletableFuture<Long> publishAsync(String name, Object content, String callbackName, String group) {
         return CompletableFuture.supplyAsync(() -> publish(name, content, callbackName, group));
     }
 
     @Override
-    public CompletableFuture<String> publishAsync(String name, Object content, Map<String, String> headers) {
+    public CompletableFuture<Long> publishAsync(String name, Object content, Map<String, String> headers) {
         return CompletableFuture.supplyAsync(() -> publish(name, content, headers));
     }
 
     @Override
-    public CompletableFuture<String> publishAsync(String name, Object content, Map<String, String> headers,
+    public CompletableFuture<Long> publishAsync(String name, Object content, Map<String, String> headers,
             String group) {
         return CompletableFuture.supplyAsync(() -> publish(name, content, headers, group));
     }
 
     @Override
-    public String publishDelay(String name, Object content, long delaySeconds) {
+    public Long publishDelay(String name, Object content, long delaySeconds) {
         return publishDelay(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 delaySeconds);
     }
 
     @Override
-    public String publishDelay(String name, Object content, String group, long delaySeconds) {
+    public Long publishDelay(String name, Object content, String group, long delaySeconds) {
         return publishInternal(name, content, null, group, null, false, delaySeconds);
     }
 
     @Override
-    public String publishDelay(String name, Object content, String callbackName, String group, long delaySeconds) {
+    public Long publishDelay(String name, Object content, String callbackName, String group, long delaySeconds) {
         return publishInternal(name, content, callbackName, group, null, false, delaySeconds);
     }
 
     @Override
-    public String publishDelay(String name, Object content, Map<String, String> headers, long delaySeconds) {
+    public Long publishDelay(String name, Object content, Map<String, String> headers, long delaySeconds) {
         return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, false, delaySeconds);
     }
 
     @Override
-    public String publishDelay(String name, Object content, Map<String, String> headers, String group,
+    public Long publishDelay(String name, Object content, Map<String, String> headers, String group,
             long delaySeconds) {
         return publishInternal(name, content, null, group, headers, false, delaySeconds);
     }
 
     @Override
-    public CompletableFuture<String> publishDelayAsync(String name, Object content, long delaySeconds) {
+    public CompletableFuture<Long> publishDelayAsync(String name, Object content, long delaySeconds) {
         return CompletableFuture.supplyAsync(() -> publishDelay(name, content, delaySeconds));
     }
 
     @Override
-    public CompletableFuture<String> publishDelayAsync(String name, Object content, String group, long delaySeconds) {
+    public CompletableFuture<Long> publishDelayAsync(String name, Object content, String group, long delaySeconds) {
         return CompletableFuture.supplyAsync(() -> publishDelay(name, content, group, delaySeconds));
     }
 
     @Override
-    public CompletableFuture<String> publishDelayAsync(String name, Object content, String callbackName, String group,
+    public CompletableFuture<Long> publishDelayAsync(String name, Object content, String callbackName, String group,
             long delaySeconds) {
         return CompletableFuture.supplyAsync(() -> publishDelay(name, content, callbackName, group, delaySeconds));
     }
 
     @Override
-    public CompletableFuture<String> publishDelayAsync(String name, Object content, Map<String, String> headers,
+    public CompletableFuture<Long> publishDelayAsync(String name, Object content, Map<String, String> headers,
             long delaySeconds) {
         return CompletableFuture.supplyAsync(() -> publishDelay(name, content, headers, delaySeconds));
     }
 
     @Override
-    public CompletableFuture<String> publishDelayAsync(String name, Object content, Map<String, String> headers,
+    public CompletableFuture<Long> publishDelayAsync(String name, Object content, Map<String, String> headers,
             String group, long delaySeconds) {
         return CompletableFuture.supplyAsync(() -> publishDelay(name, content, headers, group, delaySeconds));
     }
 
     @Override
-    public String publishTransactional(String name, Object content) {
+    public Long publishTransactional(String name, Object content) {
         return publishTransactional(name, content, capProperties != null ? capProperties.getDefaultGroupName() : "default");
     }
 
     @Override
-    public String publishTransactional(String name, Object content, String group) {
+    public Long publishTransactional(String name, Object content, String group) {
         return publishInternal(name, content, null, group, null, true);
     }
 
     @Override
-    public String publishTransactional(String name, Object content, String callbackName, String group) {
+    public Long publishTransactional(String name, Object content, String callbackName, String group) {
         return publishInternal(name, content, callbackName, group, null, true);
     }
 
     @Override
-    public String publishTransactional(String name, Object content, Map<String, String> headers) {
+    public Long publishTransactional(String name, Object content, Map<String, String> headers) {
         return publishInternal(name, content, null, capProperties != null ? capProperties.getDefaultGroupName() : "default",
                 headers, true);
     }
 
     @Override
-    public String publishTransactional(String name, Object content, Map<String, String> headers, String group) {
+    public Long publishTransactional(String name, Object content, Map<String, String> headers, String group) {
         return publishInternal(name, content, null, group, headers, true);
     }
 
     @Override
-    public CompletableFuture<String> publishTransactionalAsync(String name, Object content) {
+    public CompletableFuture<Long> publishTransactionalAsync(String name, Object content) {
         return CompletableFuture.supplyAsync(() -> publishTransactional(name, content));
     }
 
     @Override
-    public CompletableFuture<String> publishTransactionalAsync(String name, Object content, String group) {
+    public CompletableFuture<Long> publishTransactionalAsync(String name, Object content, String group) {
         return CompletableFuture.supplyAsync(() -> publishTransactional(name, content, group));
     }
 
     @Override
-    public CompletableFuture<String> publishTransactionalAsync(String name, Object content, String callbackName,
+    public CompletableFuture<Long> publishTransactionalAsync(String name, Object content, String callbackName,
             String group) {
         return CompletableFuture.supplyAsync(() -> publishTransactional(name, content, callbackName, group));
     }
 
     @Override
-    public CompletableFuture<String> publishTransactionalAsync(String name, Object content,
+    public CompletableFuture<Long> publishTransactionalAsync(String name, Object content,
             Map<String, String> headers) {
         return CompletableFuture.supplyAsync(() -> publishTransactional(name, content, headers));
     }
 
     @Override
-    public CompletableFuture<String> publishTransactionalAsync(String name, Object content, Map<String, String> headers,
+    public CompletableFuture<Long> publishTransactionalAsync(String name, Object content, Map<String, String> headers,
             String group) {
         return CompletableFuture.supplyAsync(() -> publishTransactional(name, content, headers, group));
     }
@@ -207,7 +207,7 @@ public class CapPublisherImpl implements CapPublisher {
     /**
      * 内部发布方法
      */
-    private String publishInternal(String name, Object content, String callbackName, String group,
+    private Long publishInternal(String name, Object content, String callbackName, String group,
             Map<String, String> headers, boolean transactional) {
         return publishInternal(name, content, callbackName, group, headers, transactional, null);
     }
@@ -215,11 +215,11 @@ public class CapPublisherImpl implements CapPublisher {
     /**
      * 内部发布方法（支持延迟）
      */
-    private String publishInternal(String name, Object content, String callbackName, String group,
+    private Long publishInternal(String name, Object content, String callbackName, String group,
             Map<String, String> headers, boolean transactional, Long delaySeconds) {
         try {
-            // 生成消息ID
-            String messageId = UUID.randomUUID().toString();
+            // 生成消息ID（长整型）
+            Long messageId = System.currentTimeMillis() + Thread.currentThread().getId();
 
             // 创建CAP消息
             CapMessage capMessage = new CapMessage(name, content);
