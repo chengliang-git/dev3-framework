@@ -7,30 +7,7 @@ spring:
   application:
     name: guanwei-tles-case-transfer
   profiles:
-    active: dev
-
-  # MongoDB配置
-  data:
-    mongodb:
-      host: localhost
-      port: 27017
-      database: tles_case_db
-      username: admin
-      password: admin123
-      authentication-database: admin
-
-  # Oracle数据源配置
-  datasource:
-    driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@localhost:1521:ORCL
-    username: tles_user
-    password: tles_pass
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+    active: test
 
 # MyBatis Plus配置
 mybatis-plus:
@@ -65,14 +42,12 @@ cap:
   message-queue:
     type: "rabbitmq"
     rabbitmq:
-      host: "${spring.rabbitmq.host}"
-      port: "${spring.rabbitmq.port}"
-      username: "${spring.rabbitmq.username}"
-      password: "${spring.rabbitmq.password}"
-      virtual-host: "${spring.rabbitmq.virtual-host}"
+      # 指定要绑定的交换机名称
       exchange-name: "tles.case-biz.case-v1"
       exchange-type: "topic"
       queue-prefix: "cap_"
+    # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
+    # 连接配置继承自spring.rabbitmq，无需重复配置
   
   # 消费者配置
   consumer-thread-count: 10
@@ -111,8 +86,10 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
   file:
     name: logs/case-transfer.log
-    max-size: 100MB
-    max-history: 30
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
 
 # 管理端点配置
 management:

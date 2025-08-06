@@ -32,13 +32,11 @@ cap:
   message-queue:
     type: "rabbitmq"
     rabbitmq:
-      # 连接配置继承自spring.rabbitmq，无需重复配置
-      # host, port, username, password, virtual-host 都从spring.rabbitmq读取
-      
-      # CAP特有的配置
+      # 指定要绑定的交换机名称
       exchange-name: "tles.case-biz.case-v1"
       exchange-type: "topic"
       queue-prefix: "cap_"
+    # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
   
   # 生产环境优化配置
   consumer-thread-count: 20

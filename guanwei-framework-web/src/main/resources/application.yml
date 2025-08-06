@@ -213,18 +213,7 @@ cap:
   message-queue:
     # 队列类型：memory, rabbitmq, kafka
     type: "memory"
-    
-    # 队列名称前缀
-    queue-prefix: "cap_"
-    
-    # 消费者线程池大小
-    consumer-threads: 10
-    
-    # 消费者批处理大小
-    batch-size: 100
-    
-    # 消费者轮询间隔（毫秒）
-    poll-interval: 1000
+    # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
   
   # 重试配置
   retry:

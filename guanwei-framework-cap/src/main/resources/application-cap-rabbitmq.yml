@@ -17,20 +17,11 @@ cap:
     cleanup-interval: 3600
 
   # 消息队列配置 - RabbitMQ
-  # 注意：连接配置使用spring.rabbitmq，这里只配置CAP特有的设置
+  # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
   message-queue:
     type: "rabbitmq"
-    rabbitmq:
-      # 连接配置继承自spring.rabbitmq，无需重复配置
-      # host, port, username, password, virtual-host 都从spring.rabbitmq读取
-      
-      # CAP特有的配置
-      exchange-name: "tles.case-biz.case-v1" # 使用现有的交换机名称
-      exchange-type: "topic" # 匹配现有交换机的类型：direct, topic, fanout
-      queue-prefix: "cap_"
-      consumer-threads: 10
-      batch-size: 100
-      poll-interval: 1000
+    # 连接配置继承自spring.rabbitmq，无需重复配置
+    # host, port, username, password, virtual-host 都从spring.rabbitmq读取
 
   retry:
     max-retries: 3

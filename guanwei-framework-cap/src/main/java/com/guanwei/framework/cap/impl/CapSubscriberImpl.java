@@ -37,11 +37,11 @@ public class CapSubscriberImpl implements CapSubscriber {
     private volatile boolean running = true;
 
     public CapSubscriberImpl(MessageStorage messageStorage, MessageQueue messageQueue, 
-                           CapProperties capProperties) {
+                           CapProperties capProperties, CapQueueManager capQueueManager) {
         this.messageStorage = messageStorage;
         this.messageQueue = messageQueue;
         this.capProperties = capProperties;
-        this.capQueueManager = null;
+        this.capQueueManager = capQueueManager;
         
         // 初始化默认线程池，在@PostConstruct中重新配置
         this.consumerExecutor = Executors.newFixedThreadPool(4);

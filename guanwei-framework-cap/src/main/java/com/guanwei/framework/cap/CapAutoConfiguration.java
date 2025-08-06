@@ -54,38 +54,51 @@ public class CapAutoConfiguration {
     }
 
     /**
+     * 配置队列管理器
+     */
+    @Bean
+    public CapQueueManager capQueueManager(CapProperties properties, ConnectionFactory connectionFactory) {
+        return new CapQueueManager(
+                new RabbitAdmin(connectionFactory),
+                properties.getMessageQueue().getRabbitmq().getExchangeName(),
+                properties.getMessageQueue().getRabbitmq().getExchangeType(),
+                properties.getDefaultGroupName());
+    }
+
+    /**
      * 配置消息队列
      */
     @Bean
-    public MessageQueue messageQueue(CapProperties properties, 
-                                   AmqpAdmin amqpAdmin, 
-                                   RabbitTemplate rabbitTemplate,
-                                   ConnectionFactory connectionFactory) {
+    public MessageQueue messageQueue(CapProperties properties,
+            AmqpAdmin amqpAdmin,
+            RabbitTemplate rabbitTemplate,
+            ConnectionFactory connectionFactory,
+            CapQueueManager capQueueManager) {
         // 根据配置选择队列类型
         String queueType = properties.getMessageQueue().getType();
         switch (queueType.toLowerCase()) {
             case "memory":
                 return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
             case "rabbitmq":
-                // 创建队列管理器
-                CapQueueManager capQueueManager = new CapQueueManager(
-                    new RabbitAdmin(connectionFactory),
-                    properties.getMessageQueue().getRabbitmq().getExchangeName(),
-                    properties.getMessageQueue().getRabbitmq().getExchangeType(),
-                    properties.getDefaultGroupName()
-                );
                 return new com.guanwei.framework.cap.queue.RabbitMQMessageQueue(
-                    amqpAdmin, 
-                    rabbitTemplate, 
-                    connectionFactory, 
-                    capQueueManager,
-                    properties.getMessageQueue().getRabbitmq().getExchangeName(),
-                    properties.getMessageQueue().getRabbitmq().getQueuePrefix()
-                );
+                        amqpAdmin,
+                        rabbitTemplate,
+                        connectionFactory,
+                        capQueueManager,
+                        properties.getMessageQueue().getRabbitmq().getExchangeName(),
+                        properties.getMessageQueue().getRabbitmq().getQueuePrefix());
             default:
                 log.warn("Unknown queue type: {}, using memory queue", queueType);
                 return new com.guanwei.framework.cap.queue.MemoryMessageQueue();
         }
+    }
+
+    /**
+     * 配置订阅处理器
+     */
+    @Bean
+    public CapSubscriberProcessor capSubscriberProcessor(CapSubscriber capSubscriber) {
+        return new CapSubscriberProcessor(capSubscriber);
     }
 
     /**
@@ -109,11 +122,12 @@ public class CapAutoConfiguration {
      */
     @Bean
     public MessageDispatcher messageDispatcher(CapProperties properties,
-                                              MessageStorage messageStorage,
-                                              MessageQueue messageQueue,
-                                              SubscribeExecutor subscribeExecutor,
-                                              MessageSender messageSender) {
-        this.messageDispatcher = new DefaultMessageDispatcher(properties, messageStorage, messageQueue, subscribeExecutor, messageSender);
+            MessageStorage messageStorage,
+            MessageQueue messageQueue,
+            SubscribeExecutor subscribeExecutor,
+            MessageSender messageSender) {
+        this.messageDispatcher = new DefaultMessageDispatcher(properties, messageStorage, messageQueue,
+                subscribeExecutor, messageSender);
         return this.messageDispatcher;
     }
 
@@ -122,8 +136,8 @@ public class CapAutoConfiguration {
      */
     @Bean
     public MessageRetryProcessor messageRetryProcessor(CapProperties properties,
-                                                       MessageStorage messageStorage,
-                                                       MessageDispatcher messageDispatcher) {
+            MessageStorage messageStorage,
+            MessageDispatcher messageDispatcher) {
         this.messageRetryProcessor = new MessageRetryProcessor(properties, messageStorage, messageDispatcher);
         return this.messageRetryProcessor;
     }
@@ -133,7 +147,7 @@ public class CapAutoConfiguration {
      */
     @Bean
     public MessageCollectorProcessor messageCollectorProcessor(CapProperties properties,
-                                                               MessageStorage messageStorage) {
+            MessageStorage messageStorage) {
         this.messageCollectorProcessor = new MessageCollectorProcessor(properties, messageStorage);
         return this.messageCollectorProcessor;
     }
@@ -143,9 +157,9 @@ public class CapAutoConfiguration {
      */
     @Bean
     public CapPublisher capPublisher(CapProperties properties,
-                                    MessageStorage messageStorage,
-                                    MessageQueue messageQueue,
-                                    CapTransactionManager capTransactionManager) {
+            MessageStorage messageStorage,
+            MessageQueue messageQueue,
+            CapTransactionManager capTransactionManager) {
         return new CapPublisherImpl(messageQueue, messageStorage, properties, capTransactionManager);
     }
 
@@ -154,9 +168,10 @@ public class CapAutoConfiguration {
      */
     @Bean
     public CapSubscriber capSubscriber(CapProperties properties,
-                                       MessageStorage messageStorage,
-                                       MessageQueue messageQueue) {
-        return new CapSubscriberImpl(messageStorage, messageQueue, properties);
+            MessageStorage messageStorage,
+            MessageQueue messageQueue,
+            CapQueueManager capQueueManager) {
+        return new CapSubscriberImpl(messageStorage, messageQueue, properties, capQueueManager);
     }
 
     /**
@@ -173,19 +188,19 @@ public class CapAutoConfiguration {
     @PreDestroy
     public void destroy() {
         log.info("Shutting down CAP components...");
-        
+
         if (messageRetryProcessor != null) {
             messageRetryProcessor.shutdown();
         }
-        
+
         if (messageCollectorProcessor != null) {
             messageCollectorProcessor.shutdown();
         }
-        
+
         if (messageDispatcher != null) {
             messageDispatcher.stop();
         }
-        
+
         log.info("CAP components shutdown completed");
     }
 }
