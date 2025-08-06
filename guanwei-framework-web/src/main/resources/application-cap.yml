@@ -49,12 +49,4 @@ cap:
     strategy: "fixed"
     
     # 指数退避的基数
-    exponential-base: 2.0
-
-# 日志配置
-logging:
-  level:
-    com.guanwei.framework.cap: DEBUG
-    com.guanwei.framework.cap.impl: DEBUG
-    com.guanwei.framework.cap.storage: DEBUG
-    com.guanwei.framework.cap.queue: DEBUG 
+    exponential-base: 2.0 

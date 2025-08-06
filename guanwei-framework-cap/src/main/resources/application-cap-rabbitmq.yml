@@ -3,37 +3,62 @@ cap:
   enabled: true
   default-group: "default"
 
-  # 使用 RabbitMQ 存储和队列
+  # 使用 Oracle 存储和 RabbitMQ 队列
   storage:
-    type: "memory" # 可选：redis
+    type: "oracle" # 可选：memory, redis, oracle
+    database:
+      # 连接配置继承自spring.datasource，无需重复配置
+      # url, username, password, driver-class-name 都从spring.datasource读取
+      
+      # CAP特有的配置
+      schema: "CAP"
+      table-prefix: "CAP_"
     message-expired: 86400
     cleanup-interval: 3600
 
+  # 消息队列配置 - RabbitMQ
+  # 注意：连接配置使用spring.rabbitmq，这里只配置CAP特有的设置
   message-queue:
     type: "rabbitmq"
-    exchange-name: "tles.case-biz.case-v1" # 使用现有的交换机名称
-    exchange-type: "topic" # 匹配现有交换机的类型：direct, topic, fanout
-    queue-prefix: "cap_"
-    consumer-threads: 10
-    batch-size: 100
-    poll-interval: 1000
+    rabbitmq:
+      # 连接配置继承自spring.rabbitmq，无需重复配置
+      # host, port, username, password, virtual-host 都从spring.rabbitmq读取
+      
+      # CAP特有的配置
+      exchange-name: "tles.case-biz.case-v1" # 使用现有的交换机名称
+      exchange-type: "topic" # 匹配现有交换机的类型：direct, topic, fanout
+      queue-prefix: "cap_"
+      consumer-threads: 10
+      batch-size: 100
+      poll-interval: 1000
 
   retry:
     max-retries: 3
     retry-interval: 60
     strategy: "fixed"
 
-# RabbitMQ 连接配置
+# Spring DataSource 配置
+# 这是Spring DataSource的标准配置，CAP框架会自动使用这些连接信息
 spring:
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521:XE
+    username: framework
+    password: framework123
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      pool-name: HikariCP
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1 FROM DUAL
+
+# RabbitMQ 连接配置
+# 这是Spring RabbitMQ的标准配置，CAP框架会自动使用这些连接信息
   rabbitmq:
     host: localhost
     port: 5672
     username: guest
     password: guest
     virtual-host: test
-
-# 日志配置
-logging:
-  level:
-    com.guanwei.framework.cap: DEBUG
-    org.springframework.amqp: DEBUG
