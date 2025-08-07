@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -24,6 +25,102 @@ public interface CaseMapper {
      * @return 案件实体
      */
     CaseInfoEntity selectByCaseId(@Param("caseId") String caseId);
+
+    /**
+     * 根据案件编号查询案件信息
+     * 
+     * @param caseNo 案件编号
+     * @return 案件实体
+     */
+    CaseInfoEntity selectByCaseNo(@Param("caseNo") String caseNo);
+
+    /**
+     * 根据当事人姓名查询案件列表
+     * 
+     * @param partyName 当事人姓名
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectByPartyName(@Param("partyName") String partyName);
+
+    /**
+     * 根据当事单位名称查询案件列表
+     * 
+     * @param companyName 当事单位名称
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectByCompanyName(@Param("companyName") String companyName);
+
+    /**
+     * 根据案件状态查询案件列表
+     * 
+     * @param state 案件状态
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectByState(@Param("state") Integer state);
+
+    /**
+     * 根据违法地点查询案件列表
+     * 
+     * @param illegalLocation 违法地点
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectByIllegalLocation(@Param("illegalLocation") String illegalLocation);
+
+    /**
+     * 根据立案时间范围查询案件列表
+     * 
+     * @param startTime 开始时间
+     * @param endTime   结束时间
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectByCaseFilingTimeBetween(@Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 查询所有案件信息
+     * 
+     * @return 案件列表
+     */
+    List<CaseInfoEntity> selectAll();
+
+    /**
+     * 根据ID查询案件信息
+     * 
+     * @param id 案件ID
+     * @return 案件实体
+     */
+    CaseInfoEntity selectById(@Param("id") String id);
+
+    /**
+     * 统计案件数量
+     * 
+     * @return 案件数量
+     */
+    long count();
+
+    /**
+     * 保存案件信息
+     * 
+     * @param entity 案件实体
+     * @return 影响行数
+     */
+    int insert(CaseInfoEntity entity);
+
+    /**
+     * 更新案件信息
+     * 
+     * @param entity 案件实体
+     * @return 影响行数
+     */
+    int update(CaseInfoEntity entity);
+
+    /**
+     * 根据ID删除案件信息
+     * 
+     * @param id 案件ID
+     * @return 影响行数
+     */
+    int deleteById(@Param("id") String id);
 
     /**
      * 根据案件ID查询案件当事人信息

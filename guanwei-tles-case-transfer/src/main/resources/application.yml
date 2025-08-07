@@ -9,6 +9,56 @@ spring:
   profiles:
     active: dev
 
+# JWT配置
+jwt:
+  secret: guanwei-tles-case-transfer-jwt-secret-key-2024
+  expiration: 86400000  # 24小时
+  header: Authorization
+  prefix: "Bearer "
+
+# 框架配置
+framework:
+  security:
+    permit-all-paths:
+      - /api/cases/**
+      - /api/case-transfer/**
+      - /doc.html
+      - /webjars/**
+      - /swagger-resources/**
+      - /v3/api-docs/**
+      - /actuator/**
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+# Knife4j API文档配置
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: true
+    enable-reload-cache-parameter: true
+    enable-after-script: true
+    enable-filter-multipart-api-method-type: POST
+    enable-filter-multipart-apis: false
+    enable-request-cache: true
+    enable-host: false
+    enable-host-text: http://localhost:8083
+    enable-home-custom: true
+    home-custom-location: classpath:markdown/home.md
+    # 启用安全配置
+    enable-security: true
+  documents:
+    - group: 案件转存API
+      name: 案件数据转存服务接口文档
+      locations: classpath:markdown/*
+    - group: 认证指南
+      name: JWT认证使用指南
+      locations: classpath:markdown/jwt-auth-guide.md
+
 # MyBatis Plus配置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

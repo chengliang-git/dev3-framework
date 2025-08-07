@@ -1,0 +1,107 @@
+server:
+  port: 8084
+  servlet:
+    context-path: /auth
+
+spring:
+  application:
+    name: guanwei-auth-service
+  profiles:
+    active: dev
+
+# JWT配置
+jwt:
+  secret: auth-service-jwt-secret-key-2024
+  expiration: 86400000 # 24小时
+  header: Authorization
+  prefix: Bearer
+
+# OAuth2配置
+oauth2:
+  client:
+    client-id: guanwei-client
+    client-secret: guanwei-secret
+    redirect-uri: http://localhost:3000/callback
+    scope: read,write
+    authorization-grant-type: authorization_code
+  authorization:
+    authorization-endpoint: /oauth2/authorize
+    token-endpoint: /oauth2/token
+    userinfo-endpoint: /oauth2/userinfo
+
+# 框架配置
+framework:
+  security:
+    permit-all-paths:
+      - /api/auth/login
+      - /api/auth/register
+      - /oauth2/**
+      - /doc.html
+      - /webjars/**
+      - /swagger-resources/**
+      - /v3/api-docs/**
+      - /actuator/**
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+# Knife4j API文档配置
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-version: true
+    enable-reload-cache-parameter: true
+    enable-after-script: true
+    enable-filter-multipart-api-method-type: POST
+    enable-filter-multipart-apis: false
+    enable-request-cache: true
+    enable-host: false
+    enable-host-text: http://localhost:8084
+    enable-home-custom: true
+    home-custom-location: classpath:markdown/home.md
+  documents:
+    - group: 认证授权API
+      name: 认证授权服务接口文档
+      locations: classpath:markdown/*
+
+# MyBatis Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.guanwei.auth.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 日志配置
+logging:
+  level:
+    com.guanwei.auth: DEBUG
+    com.guanwei.framework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: logs/auth-service.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
