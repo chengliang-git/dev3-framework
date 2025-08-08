@@ -124,13 +124,27 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Long id = generateMessageId();
-                CapMessage message = new CapMessage(name, content);
-                message.setDbId(id);
-                message.setStatus(CapMessageStatus.SCHEDULED);
-                message.setAdded(LocalDateTime.now());
-                message.setRetries(0);
-                
+                CapMessage message;
+                Long id;
+                if (content instanceof CapMessage) {
+                    message = (CapMessage) content;
+                    id = message.getId() != null ? message.getId() : generateMessageId();
+                    message.setDbId(id);
+                    if (message.getStatus() == null) {
+                        message.setStatus(CapMessageStatus.SCHEDULED);
+                    }
+                    if (message.getAdded() == null) {
+                        message.setAdded(LocalDateTime.now());
+                    }
+                } else {
+                    id = generateMessageId();
+                    message = new CapMessage(name, content);
+                    message.setDbId(id);
+                    message.setStatus(CapMessageStatus.SCHEDULED);
+                    message.setAdded(LocalDateTime.now());
+                    message.setRetries(0);
+                }
+
                 publishedMessages.put(id, message);
                 return message;
             } catch (Exception e) {
@@ -226,7 +240,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<Integer> deleteReceivedMessageAsync(String id) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                CapMessage removed = receivedMessages.remove(id);
+                CapMessage removed = receivedMessages.remove(parseId(id));
                 return removed != null ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting received message: {}", id, e);
@@ -239,7 +253,7 @@ public class MemoryMessageStorage implements MessageStorage {
     public CompletableFuture<Integer> deletePublishedMessageAsync(String id) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                CapMessage removed = publishedMessages.remove(id);
+                CapMessage removed = publishedMessages.remove(parseId(id));
                 return removed != null ? 1 : 0;
             } catch (Exception e) {
                 log.error("Error deleting published message: {}", id, e);
@@ -357,9 +371,7 @@ public class MemoryMessageStorage implements MessageStorage {
             return instance;
         }
 
-        public LocalDateTime getExpiresAt() {
-            return expiresAt;
-        }
+        // getter intentionally omitted to reduce unused code warnings
 
         public void setExpiresAt(LocalDateTime expiresAt) {
             this.expiresAt = expiresAt;
@@ -367,6 +379,14 @@ public class MemoryMessageStorage implements MessageStorage {
 
         public boolean isValid() {
             return expiresAt != null && LocalDateTime.now().isBefore(expiresAt);
+        }
+    }
+
+    private Long parseId(String id) {
+        try {
+            return Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 }

@@ -44,10 +44,10 @@ public class CapDemoController {
             Object content = request.get("content");
             String group = (String) request.getOrDefault("group", "default");
 
-            String messageId = capPublisher.publish(messageName, content, group);
+            Long messageId = capPublisher.publish(messageName, content, group);
 
             log.info("Published message: {} -> {}", messageId, messageName);
-            return Result.success(messageId);
+            return Result.success(String.valueOf(messageId));
         } catch (Exception e) {
             log.error("Failed to publish message", e);
             return Result.error("Failed to publish message: " + e.getMessage());
@@ -65,10 +65,10 @@ public class CapDemoController {
             String group = (String) request.getOrDefault("group", "default");
             Long delaySeconds = Long.valueOf(request.get("delaySeconds").toString());
 
-            String messageId = capPublisher.publishDelay(messageName, content, group, delaySeconds);
+            Long messageId = capPublisher.publishDelay(messageName, content, group, delaySeconds);
 
             log.info("Published delay message: {} -> {} (delay: {}s)", messageId, messageName, delaySeconds);
-            return Result.success(messageId);
+            return Result.success(String.valueOf(messageId));
         } catch (Exception e) {
             log.error("Failed to publish delay message", e);
             return Result.error("Failed to publish delay message: " + e.getMessage());
@@ -85,10 +85,10 @@ public class CapDemoController {
             Object content = request.get("content");
             String group = (String) request.getOrDefault("group", "default");
 
-            String messageId = capPublisher.publishTransactional(messageName, content, group);
+            Long messageId = capPublisher.publishTransactional(messageName, content, group);
 
             log.info("Published transactional message: {} -> {}", messageId, messageName);
-            return Result.success(messageId);
+            return Result.success(String.valueOf(messageId));
         } catch (Exception e) {
             log.error("Failed to publish transactional message", e);
             return Result.error("Failed to publish transactional message: " + e.getMessage());
@@ -107,7 +107,7 @@ public class CapDemoController {
             // 注册消息处理器
             capSubscriber.subscribe(messageName, group, message -> {
                 log.info("Received message: {} -> {}", message.getId(), message.getContent());
-                receivedMessages.put(message.getId(), message.getContent());
+                receivedMessages.put(String.valueOf(message.getId()), message.getContent());
             });
 
             log.info("Subscribed to message: {} (group: {})", messageName, group);

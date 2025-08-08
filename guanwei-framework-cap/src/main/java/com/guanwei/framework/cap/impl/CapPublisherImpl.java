@@ -1,23 +1,16 @@
 package com.guanwei.framework.cap.impl;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapMessageStatus;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapPublisher;
-import com.guanwei.framework.cap.CapTransaction;
 import com.guanwei.framework.cap.CapTransactionManager;
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import com.guanwei.framework.cap.util.MessageIdGenerator;
 
@@ -33,7 +26,7 @@ public class CapPublisherImpl implements CapPublisher {
     private final MessageStorage messageStorage;
     private final CapProperties capProperties;
     private final CapTransactionManager transactionManager;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    // no-op
 
     public CapPublisherImpl(MessageQueue messageQueue, MessageStorage messageStorage, 
                            CapProperties capProperties, CapTransactionManager transactionManager) {
@@ -222,7 +215,7 @@ public class CapPublisherImpl implements CapPublisher {
             // 生成消息ID（使用雪花算法避免重复）
             Long messageId = MessageIdGenerator.getInstance().nextId();
 
-            // 创建CAP消息
+            // 创建CAP消息并统一使用 messageId 作为对外可见的消息ID
             CapMessage capMessage = new CapMessage(name, content);
             capMessage.setDbId(messageId);
             capMessage.setGroup(group);
@@ -248,10 +241,12 @@ public class CapPublisherImpl implements CapPublisher {
             if (transactional && transactionManager != null && transactionManager.hasActiveTransaction()) {
                 // 在事务中存储消息，但不立即发送
                 try {
-                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, content, null).get();
+                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, capMessage, null).get();
                     if (storedMessage == null) {
                         throw new RuntimeException("Failed to store transactional message");
                     }
+                    // 确保存储后的实体继续使用同一个ID（避免存储端自生成与队列ID不一致）
+                    storedMessage.setDbId(messageId);
                     log.info("Stored transactional message: {} in current transaction", messageId);
                     return messageId;
                 } catch (Exception e) {
@@ -260,10 +255,11 @@ public class CapPublisherImpl implements CapPublisher {
             } else {
                 // 存储消息
                 try {
-                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, content, null).get();
+                    CapMessage storedMessage = messageStorage.storeMessageAsync(name, capMessage, null).get();
                     if (storedMessage == null) {
                         throw new RuntimeException("Failed to store message");
                     }
+                    storedMessage.setDbId(messageId);
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to store message", e);
                 }

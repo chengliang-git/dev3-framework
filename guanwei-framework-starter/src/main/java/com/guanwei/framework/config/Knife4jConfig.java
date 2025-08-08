@@ -21,7 +21,7 @@ import org.springframework.http.HttpHeaders;
  */
 @Slf4j
 @Configuration
-@ConditionalOnProperty(name = "spring.application.name", havingValue = "enterprise-framework", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "knife4j", name = "enable", havingValue = "true", matchIfMissing = false)
 public class Knife4jConfig {
 
     /**

@@ -1,6 +1,5 @@
 package com.guanwei.framework.cap.storage;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapMessageStatus;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,7 @@ public class RedisMessageStorage implements MessageStorage {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    // no-op
 
     // Redis键前缀
     private static final String PUBLISHED_PREFIX = "cap:published:";
@@ -81,7 +80,7 @@ public class RedisMessageStorage implements MessageStorage {
                 script.setScriptText(RELEASE_LOCK_SCRIPT);
                 script.setResultType(Long.class);
                 
-                Long result = redisTemplate.execute(script, List.of(lockKey), instance);
+                redisTemplate.execute(script, List.of(lockKey), instance);
             } catch (Exception e) {
                 log.error("Error releasing lock for key: {}", key, e);
             }
@@ -158,12 +157,26 @@ public class RedisMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Long id = System.currentTimeMillis() + System.nanoTime();
-                CapMessage message = new CapMessage(name, content);
-                message.setDbId(id);
-                message.setStatus(CapMessageStatus.SCHEDULED);
-                message.setAdded(LocalDateTime.now());
-                message.setRetries(0);
+                CapMessage message;
+                Long id;
+                if (content instanceof CapMessage) {
+                    message = (CapMessage) content;
+                    id = message.getId() != null ? message.getId() : System.currentTimeMillis() + System.nanoTime();
+                    message.setDbId(id);
+                } else {
+                    id = System.currentTimeMillis() + System.nanoTime();
+                    message = new CapMessage(name, content);
+                    message.setDbId(id);
+                }
+                if (message.getStatus() == null) {
+                    message.setStatus(CapMessageStatus.SCHEDULED);
+                }
+                if (message.getAdded() == null) {
+                    message.setAdded(LocalDateTime.now());
+                }
+                if (message.getRetries() == 0) {
+                    message.setRetries(0);
+                }
                 
                 String key = PUBLISHED_PREFIX + id;
                 redisTemplate.opsForValue().set(key, message);

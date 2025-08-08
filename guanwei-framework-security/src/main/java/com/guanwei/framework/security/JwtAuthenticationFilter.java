@@ -75,10 +75,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * @return Token
      */
     private String getTokenFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader(jwtProperties.getHeader());
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(jwtProperties.getPrefix())) {
-            return bearerToken.substring(jwtProperties.getPrefix().length());
+        String headerValue = request.getHeader(jwtProperties.getHeader());
+        if (!StringUtils.hasText(headerValue)) {
+            return null;
         }
+
+        // 标准处理：兼容 "Bearer <token>" 或配置前缀大小写及是否带空格
+        String configuredPrefix = jwtProperties.getPrefix();
+        if (StringUtils.hasText(configuredPrefix)) {
+            String normalizedHeader = headerValue.trim();
+            String normalizedPrefix = configuredPrefix.trim();
+            if (normalizedHeader.regionMatches(true, 0, normalizedPrefix, 0, normalizedPrefix.length())) {
+                String tokenPart = normalizedHeader.substring(normalizedPrefix.length());
+                return tokenPart.trim();
+            }
+        }
+
+        // 兜底：按标准 Bearer 方案解析
+        if (headerValue.regionMatches(true, 0, "Bearer", 0, "Bearer".length())) {
+            String tokenPart = headerValue.substring("Bearer".length());
+            return tokenPart.trim();
+        }
+
         return null;
     }
 }

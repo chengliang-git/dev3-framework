@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -16,7 +15,6 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import com.guanwei.framework.cap.util.MessageIdGenerator;
 
@@ -30,8 +28,7 @@ public class OracleMessageStorage implements MessageStorage {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private TransactionTemplate transactionTemplate;
+    // TransactionTemplate optional, reserved for future transactional enhancements
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -134,7 +131,7 @@ public class OracleMessageStorage implements MessageStorage {
         return CompletableFuture.runAsync(() -> {
             try {
                 String sql = "DELETE FROM " + LOCK_TABLE + " WHERE KEYID = ? AND INSTANCE = ?";
-                int deleted = jdbcTemplate.update(sql, key, instance);
+                jdbcTemplate.update(sql, key, instance);
             } catch (Exception e) {
                 log.error("Error releasing lock: {}", key, e);
             }
@@ -146,7 +143,7 @@ public class OracleMessageStorage implements MessageStorage {
         return CompletableFuture.runAsync(() -> {
             try {
                 String sql = "UPDATE " + LOCK_TABLE + " SET LASTLOCKTIME = ? WHERE KEYID = ? AND INSTANCE = ?";
-                int updated = jdbcTemplate.update(sql,
+                jdbcTemplate.update(sql,
                         Timestamp.valueOf(LocalDateTime.now().plus(ttl)), key, instance);
             } catch (Exception e) {
                 log.error("Error renewing lock: {}", key, e);
@@ -201,8 +198,18 @@ public class OracleMessageStorage implements MessageStorage {
     public CompletableFuture<CapMessage> storeMessageAsync(String name, Object content, Object transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                Long id = generateMessageId();
-                String contentJson = objectMapper.writeValueAsString(content);
+                CapMessage message;
+                Long id;
+                if (content instanceof CapMessage) {
+                    message = (CapMessage) content;
+                    id = message.getId() != null ? message.getId() : generateMessageId();
+                } else {
+                    message = new CapMessage(name, content);
+                    id = generateMessageId();
+                    message.setDbId(id);
+                }
+
+                String contentJson = objectMapper.writeValueAsString(message.getContent());
 
                 String sql = """
                         INSERT INTO %s (ID, NAME, CONTENT, RETRIES, STATUSNAME, ADDED, VERSION)
@@ -212,7 +219,6 @@ public class OracleMessageStorage implements MessageStorage {
                 jdbcTemplate.update(sql, id, name, contentJson, 0,
                         CapMessageStatus.SCHEDULED.getValue(), "v1");
 
-                CapMessage message = new CapMessage(name, content);
                 message.setDbId(id);
                 message.setStatus(CapMessageStatus.SCHEDULED);
                 message.setAdded(LocalDateTime.now());
