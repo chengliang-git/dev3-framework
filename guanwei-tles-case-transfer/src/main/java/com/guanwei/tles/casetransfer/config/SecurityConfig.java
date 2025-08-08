@@ -1,7 +1,6 @@
 package com.guanwei.tles.casetransfer.config;
 
 import com.guanwei.framework.security.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -15,6 +14,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.guanwei.framework.security.SecurityExceptionHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 案件转存服务安全配置
@@ -29,6 +30,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired(required = false)
+    private SecurityExceptionHandler securityExceptionHandler;
 
     @Bean
     @Primary
@@ -59,6 +63,13 @@ public class SecurityConfig {
                         .permitAll()
                         // 其他所有请求都需要认证
                         .anyRequest().authenticated())
+                // 统一异常 JSON 返回
+                .exceptionHandling(ex -> {
+                    if (securityExceptionHandler != null) {
+                        ex.authenticationEntryPoint(securityExceptionHandler)
+                          .accessDeniedHandler(securityExceptionHandler);
+                    }
+                })
                 // 添加JWT过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

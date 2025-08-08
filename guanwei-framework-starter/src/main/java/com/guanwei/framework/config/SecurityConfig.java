@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
 /**
  * Spring Security配置
@@ -33,10 +34,14 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Autowired(required = false)
+    private com.guanwei.framework.security.SecurityExceptionHandler securityExceptionHandler;
+
     @Autowired
     private FrameworkProperties frameworkProperties;
 
     @Bean
+    @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
@@ -47,6 +52,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // 禁用CSRF
@@ -62,6 +68,13 @@ public class SecurityConfig {
                     auth.requestMatchers(permitAllPaths).permitAll();
                     // 其他请求需要认证
                     auth.anyRequest().authenticated();
+                })
+                // 统一异常 JSON 返回
+                .exceptionHandling(ex -> {
+                    if (securityExceptionHandler != null) {
+                        ex.authenticationEntryPoint(securityExceptionHandler)
+                          .accessDeniedHandler(securityExceptionHandler);
+                    }
                 })
                 // 添加JWT过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

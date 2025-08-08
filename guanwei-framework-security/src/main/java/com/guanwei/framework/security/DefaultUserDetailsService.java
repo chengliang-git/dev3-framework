@@ -5,18 +5,12 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
 /**
- * 默认用户详情服务
- * 提供基本的用户认证功能
- *
- * @author Enterprise Framework
- * @since 1.0.0
+ * 默认用户详情服务（不作为组件扫描，由自动配置按需加载）
  */
-@Service
 public class DefaultUserDetailsService implements UserDetailsService {
 
     @Override

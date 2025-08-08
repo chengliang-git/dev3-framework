@@ -16,6 +16,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.guanwei.framework.security.SecurityExceptionHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -39,6 +41,9 @@ public class AuthServiceSecurityConfig {
 
     @Autowired
     private FrameworkProperties frameworkProperties;
+
+    @Autowired(required = false)
+    private SecurityExceptionHandler securityExceptionHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -85,6 +90,13 @@ public class AuthServiceSecurityConfig {
                     auth.requestMatchers(permitAllPaths.toArray(new String[0])).permitAll();
                     // 其他请求需要认证
                     auth.anyRequest().authenticated();
+                })
+                // 统一异常 JSON 返回
+                .exceptionHandling(ex -> {
+                    if (securityExceptionHandler != null) {
+                        ex.authenticationEntryPoint(securityExceptionHandler)
+                          .accessDeniedHandler(securityExceptionHandler);
+                    }
                 })
                 // 添加JWT过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -77,11 +77,12 @@ public class FrameworkProperties {
      */
     @Data
     public static class Cors {
-        private List<String> allowedOrigins = List.of("*");
-        private List<String> allowedMethods = List.of("*");
-        private List<String> allowedHeaders = List.of("*");
-        private boolean allowCredentials = true;
-        private long maxAge = 3600L;
+        // 更安全的默认：不放开，需通过配置白名单注入
+        private List<String> allowedOrigins = List.of();
+        private List<String> allowedMethods = List.of("GET", "POST");
+        private List<String> allowedHeaders = List.of("Authorization", "Content-Type");
+        private boolean allowCredentials = false;
+        private long maxAge = 600L;
     }
 
     /**

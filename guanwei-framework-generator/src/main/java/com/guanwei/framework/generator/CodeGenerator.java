@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -43,6 +42,13 @@ public class CodeGenerator {
         generator.packageInfo(getPackageConfig());
         generator.strategy(getStrategyConfig(tableNames));
         generator.template(getTemplateConfig());
+
+        // 注入自定义变量给模板（兼容 3.5.x API）
+        java.util.Map<String, Object> customMap = new java.util.HashMap<>();
+        customMap.put("baseEntityImport", generatorProperties.getBaseEntityImport());
+        customMap.put("idType", generatorProperties.getIdType().name());
+        InjectionConfig injectionConfig = new InjectionConfig.Builder().customMap(customMap).build();
+        generator.injection(injectionConfig);
 
         generator.execute();
     }
@@ -110,7 +116,7 @@ public class CodeGenerator {
                 .enableTableFieldAnnotation()
                 .naming(NamingStrategy.underline_to_camel)
                 .columnNaming(NamingStrategy.underline_to_camel)
-                .idType(IdType.ASSIGN_UUID)
+                .idType(generatorProperties.getIdType())
                 .addTableFills(
                         new Column("createTime", FieldFill.INSERT),
                         new Column("modifyTime", FieldFill.INSERT_UPDATE),
@@ -164,6 +170,9 @@ public class CodeGenerator {
         private String tablePrefix = "t_";
         private List<String> excludeColumns = Arrays.asList("id", "createTime", "modifyTime", "creator", "modifier",
                 "delFlag", "orderNo");
+        // 新增：BaseEntity import 与主键策略
+        private String baseEntityImport = "com.guanwei.framework.entity.BaseEntity";
+        private IdType idType = IdType.ASSIGN_ID;
 
         public String getAuthor() {
             return author;
@@ -196,5 +205,9 @@ public class CodeGenerator {
         public void setExcludeColumns(List<String> excludeColumns) {
             this.excludeColumns = excludeColumns;
         }
+        public String getBaseEntityImport() { return baseEntityImport; }
+        public void setBaseEntityImport(String baseEntityImport) { this.baseEntityImport = baseEntityImport; }
+        public IdType getIdType() { return idType; }
+        public void setIdType(IdType idType) { this.idType = idType; }
     }
 }

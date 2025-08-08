@@ -29,6 +29,7 @@ public class CapSubscriberImpl implements CapSubscriber {
     private final MessageQueue messageQueue;
     private final CapProperties capProperties;
     private final CapQueueManager capQueueManager;
+    private com.guanwei.framework.cap.storage.DedupStorage dedupStorage;
 
     private final Map<String, Consumer<CapMessage>> handlers = new ConcurrentHashMap<>();
     private final Map<String, CapSubscriber.MessageHandler<?>> typedHandlers = new ConcurrentHashMap<>();
@@ -46,6 +47,10 @@ public class CapSubscriberImpl implements CapSubscriber {
         // 初始化默认线程池，在@PostConstruct中重新配置
         this.consumerExecutor = Executors.newFixedThreadPool(4);
         this.scheduler = Executors.newScheduledThreadPool(1);
+    }
+
+    public void setDedupStorage(com.guanwei.framework.cap.storage.DedupStorage dedupStorage) {
+        this.dedupStorage = dedupStorage;
     }
 
     @PostConstruct
@@ -302,6 +307,16 @@ public class CapSubscriberImpl implements CapSubscriber {
 
         consumerExecutor.submit(() -> {
             try {
+                // 幂等去重：默认使用消息ID作为去重键
+                if (dedupStorage != null) {
+                    String dedupKey = String.valueOf(message.getId());
+                    boolean first = dedupStorage.tryMarkProcessed(dedupKey, 24 * 3600);
+                    if (!first) {
+                        log.info("Skip duplicated message: {}", message.getId());
+                        messageQueue.acknowledge(queueName, message.getId());
+                        return;
+                    }
+                }
                 // 更新消息状态为重试中
                 messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.RETRYING);
 
@@ -339,11 +354,23 @@ public class CapSubscriberImpl implements CapSubscriber {
 
         consumerExecutor.submit(() -> {
             try {
+                if (dedupStorage != null) {
+                    String dedupKey = String.valueOf(message.getId());
+                    boolean first = dedupStorage.tryMarkProcessed(dedupKey, 24 * 3600);
+                    if (!first) {
+                        log.info("Skip duplicated typed message: {}", message.getId());
+                        messageQueue.acknowledge(queueName, message.getId());
+                        return;
+                    }
+                }
                 // 更新消息状态为重试中
                 messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.RETRYING);
 
                 // 执行处理器
                 Object result = handler.handle(message);
+                if (result != null) {
+                    log.debug("Typed handler result: {}", result);
+                }
 
                 // 更新消息状态为成功
                 messageStorage.updateStatusAsync(message.getId(), CapMessageStatus.SUCCEEDED);

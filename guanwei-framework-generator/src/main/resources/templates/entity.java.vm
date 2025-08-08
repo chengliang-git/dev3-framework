@@ -3,6 +3,7 @@ package ${package.Entity};
 #foreach($pkg in ${table.importPackages})
 import ${pkg};
 #end
+import ${baseEntityImport};
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,7 +30,7 @@ public class ${entity} extends BaseEntity implements Serializable {
 #foreach($field in ${table.fields})
 #if(${field.keyFlag})
     @Schema(description = "${field.comment}")
-    @TableId(value = "${field.annotationColumnName}", type = IdType.ASSIGN_UUID)
+    @TableId(value = "${field.annotationColumnName}", type = IdType.${idType})
     private ${field.propertyType} ${field.propertyName};
 #elseif(${field.name} == "createTime")
     // 创建时间字段已在BaseEntity中定义

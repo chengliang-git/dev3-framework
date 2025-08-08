@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 /**
  * 安全模块自动配置
@@ -20,5 +21,11 @@ public class SecurityAutoConfiguration {
     @ConditionalOnMissingBean
     public JwtProperties jwtProperties() {
         return new JwtProperties();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(UserDetailsService.class)
+    public UserDetailsService defaultUserDetailsService() {
+        return new DefaultUserDetailsService();
     }
 }

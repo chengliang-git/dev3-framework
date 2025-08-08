@@ -32,6 +32,8 @@ public class CapAutoConfiguration {
     private MessageRetryProcessor messageRetryProcessor;
     private MessageCollectorProcessor messageCollectorProcessor;
     private DefaultMessageDispatcher messageDispatcher;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
 
     /**
      * 配置消息存储
@@ -180,7 +182,16 @@ public class CapAutoConfiguration {
             MessageStorage messageStorage,
             MessageQueue messageQueue,
             CapQueueManager capQueueManager) {
-        return new CapSubscriberImpl(messageStorage, messageQueue, properties, capQueueManager);
+        CapSubscriberImpl sub = new CapSubscriberImpl(messageStorage, messageQueue, properties, capQueueManager);
+        // 优先使用 Oracle 去重存储
+        try {
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = applicationContext.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
+            sub.setDedupStorage(new com.guanwei.framework.cap.storage.OracleDedupStorage(jdbcTemplate));
+            return sub;
+        } catch (Exception ignored) {
+        }
+        // 回退（无去重存储）
+        return sub;
     }
 
     /**
