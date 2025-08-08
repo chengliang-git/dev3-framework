@@ -22,52 +22,15 @@ spring:
     username: ${ORACLE_USERNAME:tles_user}
     password: ${ORACLE_PASSWORD:tles_pass}
 
-# CAP配置（生产环境）
+# CAP配置继承自application-cap.yml
+# 生产环境特定配置覆盖
 cap:
-  # 生产环境CAP配置
-  storage:
-    type: "oracle"
-    database:
-      # 连接配置继承自spring.datasource，无需重复配置
-      # connection-string, username, password 都从spring.datasource读取
-
-      # CAP特有的配置
-      schema: "${ORACLE_SCHEMA:CAP}"
-      table-prefix: "CAP_"
-
-  message-queue:
-    type: "rabbitmq"
-    rabbitmq:
-      # 指定要绑定的交换机名称
-      exchange-name: "tles.case-biz.case-v1"
-      exchange-type: "topic"
-      queue-prefix: "cap_"
-    # 注意：CAP框架会自动创建和管理所有必要的交换机和队列
-
   # 生产环境优化配置
   consumer-thread-count: 20
-  enable-subscriber-parallel-execute: true
   subscriber-parallel-execute-thread-count: 10
   subscriber-parallel-execute-buffer-factor: 2
-  enable-publish-parallel-send: true
-
-  # 生产环境消息过期配置
-  succeed-message-expired-after: 86400 # 成功消息24小时后过期
-  failed-message-expired-after: 259200 # 失败消息3天后过期
-
-  # 生产环境重试配置
-  failed-retry-interval: 60 # 失败重试间隔60秒
-  failed-retry-count: 5 # 最大重试次数5次
-
-  # 生产环境清理配置
-  collector-cleaning-interval: 3600 # 清理间隔1小时
-  scheduler-batch-size: 200 # 调度批处理大小
-
-  # 分布式锁配置
-  use-storage-lock: true
-
-  # 回退窗口配置
-  fallback-window-lookback-seconds: 300
+  failed-retry-count: 5
+  scheduler-batch-size: 200
 
 # 日志配置（生产环境）
 logging:

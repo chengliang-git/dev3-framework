@@ -78,13 +78,5 @@ logging:
     org.springframework.amqp: INFO
     com.rabbitmq: INFO
 
-cap:
-  message-queue:
-    type: "rabbitmq"
-    rabbitmq:
-      # 交换机名称（由业务系统直接指定）
-      exchange-name: "tles.case-biz.case-v1"
-      # 交换机类型
-      exchange-type: "topic"
-      # 队列前缀
-      queue-prefix: "cap_"
+# CAP配置继承自application-cap.yml
+# 如需覆盖特定配置，可在此处添加
