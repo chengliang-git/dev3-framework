@@ -97,6 +97,11 @@ public class CapProperties {
     private int schedulerBatchSize = 1000;
 
     /**
+     * 发布超时时间（秒），默认30秒
+     */
+    private int publishTimeout = 30;
+
+    /**
      * 是否使用存储锁，默认false
      */
     private boolean useStorageLock = false;

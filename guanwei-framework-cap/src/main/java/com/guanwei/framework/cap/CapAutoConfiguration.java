@@ -124,8 +124,8 @@ public class CapAutoConfiguration {
      * 配置消息发送器
      */
     @Bean
-    public MessageSender messageSender(CapProperties properties, MessageQueue messageQueue) {
-        return new DefaultMessageSender(properties, messageQueue);
+    public MessageSender messageSender(CapProperties properties, MessageQueue messageQueue, MessageStorage messageStorage) {
+        return new DefaultMessageSender(properties, messageQueue, messageStorage);
     }
 
     /**
@@ -170,8 +170,9 @@ public class CapAutoConfiguration {
     public CapPublisher capPublisher(CapProperties properties,
             MessageStorage messageStorage,
             MessageQueue messageQueue,
-            CapTransactionManager capTransactionManager) {
-        return new CapPublisherImpl(messageQueue, messageStorage, properties, capTransactionManager);
+            CapTransactionManager capTransactionManager,
+            MessageDispatcher messageDispatcher) {
+        return new CapPublisherImpl(messageQueue, messageStorage, properties, capTransactionManager, messageDispatcher);
     }
 
     /**

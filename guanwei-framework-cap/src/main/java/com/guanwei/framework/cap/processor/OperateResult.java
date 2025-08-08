@@ -15,6 +15,20 @@ public class OperateResult {
     private boolean succeeded;
 
     /**
+     * 是否成功（兼容性方法）
+     */
+    public boolean isSuccess() {
+        return succeeded;
+    }
+
+    /**
+     * 是否成功（兼容性方法）
+     */
+    public boolean isSucceeded() {
+        return succeeded;
+    }
+
+    /**
      * 错误信息
      */
     private String error;

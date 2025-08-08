@@ -174,4 +174,45 @@ public interface MessageStorage {
      * 删除指定状态的过期消息
      */
     CompletableFuture<Integer> deleteExpiredMessagesAsync(CapMessageStatus status, long expiredBefore);
+
+    /**
+     * 批量更新发布消息状态
+     * 用于 .NET CAP 兼容的批量状态推进
+     *
+     * @param fromStatus 原状态
+     * @param toStatus   目标状态
+     * @param batchSize  批处理大小
+     * @return 更新的消息数量
+     */
+    CompletableFuture<Integer> batchUpdatePublishedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize);
+
+    /**
+     * 批量更新接收消息状态
+     * 用于 .NET CAP 兼容的批量状态推进
+     *
+     * @param fromStatus 原状态
+     * @param toStatus   目标状态
+     * @param batchSize  批处理大小
+     * @return 更新的消息数量
+     */
+    CompletableFuture<Integer> batchUpdateReceivedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize);
+
+    /**
+     * 获取到期的延迟消息
+     * 基于 EXPIRESAT 字段驱动，用于 .NET CAP 兼容的延迟消息调度
+     *
+     * @param batchSize 批处理大小
+     * @return 到期的延迟消息列表
+     */
+    CompletableFuture<List<CapMessage>> getExpiredDelayedMessagesAsync(int batchSize);
+
+    /**
+     * 批量获取待发送的发布消息
+     * 用于 .NET CAP 兼容的批量发送
+     *
+     * @param status    消息状态
+     * @param batchSize 批处理大小
+     * @return 待发送的消息列表
+     */
+    CompletableFuture<List<CapMessage>> getPendingPublishedMessagesAsync(CapMessageStatus status, int batchSize);
 }

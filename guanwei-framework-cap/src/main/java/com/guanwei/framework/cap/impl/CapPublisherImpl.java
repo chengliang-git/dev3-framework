@@ -5,6 +5,8 @@ import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.CapPublisher;
 import com.guanwei.framework.cap.CapTransactionManager;
 import com.guanwei.framework.cap.queue.MessageQueue;
+import com.guanwei.framework.cap.processor.MessageDispatcher;
+import com.guanwei.framework.cap.CapTransaction;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,17 +25,20 @@ import com.guanwei.framework.cap.util.MessageIdGenerator;
 public class CapPublisherImpl implements CapPublisher {
 
     private final MessageQueue messageQueue;
+    private final MessageDispatcher messageDispatcher;
     private final MessageStorage messageStorage;
     private final CapProperties capProperties;
     private final CapTransactionManager transactionManager;
     // no-op
 
     public CapPublisherImpl(MessageQueue messageQueue, MessageStorage messageStorage, 
-                           CapProperties capProperties, CapTransactionManager transactionManager) {
+                           CapProperties capProperties, CapTransactionManager transactionManager,
+                           MessageDispatcher messageDispatcher) {
         this.messageQueue = messageQueue;
         this.messageStorage = messageStorage;
         this.capProperties = capProperties;
         this.transactionManager = transactionManager;
+        this.messageDispatcher = messageDispatcher;
     }
 
     @Override
@@ -234,8 +239,8 @@ public class CapPublisherImpl implements CapPublisher {
                 capMessage.setHeaders(new HashMap<>(headers));
             }
 
-            // 构建队列名称：routeKey + "." + groupName
-            String queueName = buildQueueName(name, group);
+            // 构建队列名称（用于直接队列路径时）
+            String queueName = buildQueueName(name, group); // 保留计算结果以便日志或扩展使用
 
             // 如果是事务性消息，检查是否有活动的事务
             if (transactional && transactionManager != null && transactionManager.hasActiveTransaction()) {
@@ -245,9 +250,36 @@ public class CapPublisherImpl implements CapPublisher {
                     if (storedMessage == null) {
                         throw new RuntimeException("Failed to store transactional message");
                     }
-                    // 确保存储后的实体继续使用同一个ID（避免存储端自生成与队列ID不一致）
                     storedMessage.setDbId(messageId);
                     log.info("Stored transactional message: {} in current transaction", messageId);
+
+                    // 注册事务提交后发布（与 .NET CAP 语义一致：在提交后才发送到MQ）
+                    CapTransaction current = transactionManager.getCurrentTransaction();
+                    if (current != null) {
+                        current.addTransactionListener(new CapTransaction.TransactionListener() {
+                            @Override
+                            public void beforeCommit(CapTransaction transaction) { }
+
+                            @Override
+                            public void afterCommit(CapTransaction transaction) {
+                                try {
+                                    if (delaySeconds != null) {
+                                        messageDispatcher.enqueueToScheduler(capMessage, java.time.LocalDateTime.now().plusSeconds(delaySeconds), null);
+                                    } else {
+                                        messageDispatcher.enqueueToPublish(capMessage);
+                                    }
+                                } catch (Exception ex) {
+                                    log.error("Failed to enqueue message after commit: {}", messageId, ex);
+                                }
+                            }
+
+                            @Override
+                            public void beforeRollback(CapTransaction transaction) { }
+
+                            @Override
+                            public void afterRollback(CapTransaction transaction) { }
+                        });
+                    }
                     return messageId;
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to store transactional message", e);
@@ -264,22 +296,14 @@ public class CapPublisherImpl implements CapPublisher {
                     throw new RuntimeException("Failed to store message", e);
                 }
 
-                // 发送到消息队列
-                boolean success;
+                // 通过分发器发送（保持与 .NET CAP 一致的分发路径）
                 if (delaySeconds != null) {
-                    success = messageQueue.sendDelay(queueName, capMessage, delaySeconds);
+                    messageDispatcher.enqueueToScheduler(capMessage, java.time.LocalDateTime.now().plusSeconds(delaySeconds), null);
                 } else {
-                    success = messageQueue.send(queueName, capMessage);
+                    messageDispatcher.enqueueToPublish(capMessage);
                 }
-
-                if (success) {
-                    log.info("Successfully published message: {} to queue: {} (delay: {}s, transactional: {})",
-                            messageId, queueName, delaySeconds, transactional);
-                    return messageId;
-                } else {
-                    log.error("Failed to publish message: {} to queue: {}", messageId, queueName);
-                    throw new RuntimeException("Failed to publish message to queue");
-                }
+                log.info("Enqueued message for publish: {} (delay: {}s, transactional: {})", messageId, delaySeconds, transactional);
+                return messageId;
             }
         } catch (Exception e) {
             log.error("Error publishing message: {} to group: {} (delay: {}s, transactional: {})",

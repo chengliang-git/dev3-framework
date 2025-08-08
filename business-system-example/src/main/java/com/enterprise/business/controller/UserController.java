@@ -37,7 +37,7 @@ public class UserController {
                     "email", email,
                     "timestamp", System.currentTimeMillis());
 
-            String messageId = capPublisher.publish("user.registered", eventData, "user-service");
+            Long messageId = capPublisher.publish("user.registered", eventData, "user-service");
             log.info("发布用户注册事件: {}", messageId);
 
             return Result.success("用户注册成功，事件ID: " + messageId);

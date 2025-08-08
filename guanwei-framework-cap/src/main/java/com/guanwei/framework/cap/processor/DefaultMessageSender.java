@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guanwei.framework.cap.CapMessage;
 import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.queue.MessageQueue;
+import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -21,12 +21,13 @@ public class DefaultMessageSender implements MessageSender {
 
     private final CapProperties properties;
     private final MessageQueue messageQueue;
+    private final MessageStorage messageStorage;
     private final ObjectMapper objectMapper;
 
-    @Autowired
-    public DefaultMessageSender(CapProperties properties, MessageQueue messageQueue) {
+    public DefaultMessageSender(CapProperties properties, MessageQueue messageQueue, MessageStorage messageStorage) {
         this.properties = properties;
         this.messageQueue = messageQueue;
+        this.messageStorage = messageStorage;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -54,18 +55,32 @@ public class DefaultMessageSender implements MessageSender {
                 }
             }
 
+            // 发送前更新发布状态为 QUEUED
+            try {
+                messageStorage.updateStatusAsync(message.getId(), com.guanwei.framework.cap.CapMessageStatus.QUEUED);
+            } catch (Exception ignore) {}
+
             // 发送到消息队列
             boolean sent = messageQueue.send(message.getName(), message);
             
             if (sent) {
+                try {
+                    messageStorage.updateStatusAsync(message.getId(), com.guanwei.framework.cap.CapMessageStatus.SUCCEEDED);
+                } catch (Exception ignore) {}
                 return CompletableFuture.completedFuture(OperateResult.success());
             } else {
                 log.error("Failed to send message: {}", message.getName());
+                try {
+                    messageStorage.updateStatusAsync(message.getId(), com.guanwei.framework.cap.CapMessageStatus.FAILED);
+                } catch (Exception ignore) {}
                 return CompletableFuture.completedFuture(OperateResult.failed("Failed to send message to queue"));
             }
 
         } catch (Exception ex) {
             log.error("Error sending message: {}", message.getName(), ex);
+            try {
+                messageStorage.updateStatusAsync(message.getId(), com.guanwei.framework.cap.CapMessageStatus.FAILED);
+            } catch (Exception ignore) {}
             return CompletableFuture.completedFuture(OperateResult.failed(ex));
         }
     }

@@ -36,6 +36,7 @@ public class OracleMessageStorage implements MessageStorage {
     private static final String PUBLISHED_TABLE = "CAP_PUBLISHED";
     private static final String RECEIVED_TABLE = "CAP_RECEIVED";
     private static final String LOCK_TABLE = "CAP_LOCKS";
+    private static final String DEDUP_TABLE = "CAP_DEDUP";
 
     /**
      * 初始化表结构
@@ -45,6 +46,7 @@ public class OracleMessageStorage implements MessageStorage {
         createPublishedTable();
         createReceivedTable();
         createLockTable();
+        createDedupTable();
     }
 
     private void createPublishedTable() {
@@ -103,6 +105,21 @@ public class OracleMessageStorage implements MessageStorage {
             log.info("Created CAP_LOCKS table");
         } catch (Exception e) {
             log.debug("CAP_LOCKS table may already exist: {}", e.getMessage());
+        }
+    }
+
+    private void createDedupTable() {
+        String sql = """
+                CREATE TABLE CAP_DEDUP (
+                    IDEMPOTENT_KEY VARCHAR2(256) PRIMARY KEY,
+                    EXPIRESAT TIMESTAMP
+                )
+                """;
+        try {
+            jdbcTemplate.execute(sql);
+            log.info("Created CAP_DEDUP table");
+        } catch (Exception e) {
+            log.debug("CAP_DEDUP table may already exist: {}", e.getMessage());
         }
     }
 
@@ -238,7 +255,7 @@ public class OracleMessageStorage implements MessageStorage {
             try {
                 Long id = generateMessageId();
                 String sql = """
-                        INSERT INTO %s (ID, NAME, GROUP_NAME, CONTENT, RETRIES, STATUSN, ADDED, VERSION)
+                        INSERT INTO %s (ID, NAME, SUBGROUP, CONTENT, RETRIES, STATUSNAME, ADDED, VERSION)
                         VALUES (?, ?, ?, ?, ?, ?, SYSTIMESTAMP, ?)
                         """.formatted(RECEIVED_TABLE);
 
@@ -284,7 +301,14 @@ public class OracleMessageStorage implements MessageStorage {
     public CompletableFuture<Integer> deleteExpiresAsync(String table, LocalDateTime timeout, int batchCount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String tableName = "published".equals(table) ? PUBLISHED_TABLE : RECEIVED_TABLE;
+                String tableName;
+                if ("published".equalsIgnoreCase(table) || "cap.published".equalsIgnoreCase(table)) {
+                    tableName = PUBLISHED_TABLE;
+                } else if ("received".equalsIgnoreCase(table) || "cap.received".equalsIgnoreCase(table)) {
+                    tableName = RECEIVED_TABLE;
+                } else {
+                    tableName = PUBLISHED_TABLE;
+                }
                 String sql = "DELETE FROM " + tableName + " WHERE ADDED < ? AND ROWNUM <= ?";
                 int deleted = jdbcTemplate.update(sql, Timestamp.valueOf(timeout), batchCount);
                 return deleted;
@@ -390,13 +414,13 @@ public class OracleMessageStorage implements MessageStorage {
                 int totalDeleted = 0;
 
                 // 删除已发布消息
-                String publishedSql = "DELETE FROM " + PUBLISHED_TABLE + " WHERE STATUSNAME = ? AND EXPIRES_AT < ?";
+                String publishedSql = "DELETE FROM " + PUBLISHED_TABLE + " WHERE STATUSNAME = ? AND ADDED < ?";
                 int publishedDeleted = jdbcTemplate.update(publishedSql, status.getValue(),
                         Timestamp.valueOf(expiredTime));
                 totalDeleted += publishedDeleted;
 
                 // 删除已接收消息
-                String receivedSql = "DELETE FROM " + RECEIVED_TABLE + " WHERE STATUSNAME = ? AND EXPIRES_AT < ?";
+                String receivedSql = "DELETE FROM " + RECEIVED_TABLE + " WHERE STATUSNAME = ? AND ADDED < ?";
                 int receivedDeleted = jdbcTemplate.update(receivedSql, status.getValue(),
                         Timestamp.valueOf(expiredTime));
                 totalDeleted += receivedDeleted;
@@ -421,6 +445,98 @@ public class OracleMessageStorage implements MessageStorage {
                 }
             } catch (Exception e) {
                 log.error("Error updating message status: {}", messageId, e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdatePublishedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String sql = """
+                        UPDATE %s SET STATUSNAME = ? 
+                        WHERE STATUSNAME = ? AND ROWNUM <= ?
+                        """.formatted(PUBLISHED_TABLE);
+                
+                int updated = jdbcTemplate.update(sql, toStatus.getValue(), fromStatus.getValue(), batchSize);
+                if (updated > 0) {
+                    log.debug("Batch updated {} published messages from {} to {}", updated, fromStatus, toStatus);
+                }
+                return updated;
+            } catch (Exception e) {
+                log.error("Error batch updating published message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdateReceivedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String sql = """
+                        UPDATE %s SET STATUSNAME = ? 
+                        WHERE STATUSNAME = ? AND ROWNUM <= ?
+                        """.formatted(RECEIVED_TABLE);
+                
+                int updated = jdbcTemplate.update(sql, toStatus.getValue(), fromStatus.getValue(), batchSize);
+                if (updated > 0) {
+                    log.debug("Batch updated {} received messages from {} to {}", updated, fromStatus, toStatus);
+                }
+                return updated;
+            } catch (Exception e) {
+                log.error("Error batch updating received message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getExpiredDelayedMessagesAsync(int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String sql = """
+                        SELECT ID, NAME, CONTENT, RETRIES, STATUSNAME, EXPIRESAT, ADDED, VERSION
+                        FROM %s 
+                        WHERE STATUSNAME = ? AND EXPIRESAT < SYSTIMESTAMP AND ROWNUM <= ?
+                        ORDER BY EXPIRESAT ASC
+                        """.formatted(PUBLISHED_TABLE);
+                
+                List<CapMessage> expiredMessages = jdbcTemplate.query(sql, new CapMessageRowMapper(),
+                        CapMessageStatus.DELAYED.getValue(), batchSize);
+                
+                if (!expiredMessages.isEmpty()) {
+                    log.debug("Found {} expired delayed messages", expiredMessages.size());
+                }
+                return expiredMessages;
+            } catch (Exception e) {
+                log.error("Error getting expired delayed messages", e);
+                return List.of();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getPendingPublishedMessagesAsync(CapMessageStatus status, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String sql = """
+                        SELECT ID, NAME, CONTENT, RETRIES, STATUSNAME, EXPIRESAT, ADDED, VERSION
+                        FROM %s 
+                        WHERE STATUSNAME = ? AND ROWNUM <= ?
+                        ORDER BY ADDED ASC
+                        """.formatted(PUBLISHED_TABLE);
+                
+                List<CapMessage> pendingMessages = jdbcTemplate.query(sql, new CapMessageRowMapper(),
+                        status.getValue(), batchSize);
+                
+                if (!pendingMessages.isEmpty()) {
+                    log.debug("Found {} pending published messages with status {}", pendingMessages.size(), status);
+                }
+                return pendingMessages;
+            } catch (Exception e) {
+                log.error("Error getting pending published messages with status {}", status, e);
+                return List.of();
             }
         });
     }

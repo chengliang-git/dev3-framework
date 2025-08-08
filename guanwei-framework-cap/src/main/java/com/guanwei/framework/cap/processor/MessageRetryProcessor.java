@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import com.guanwei.framework.cap.CapMessageStatus;
 
 /**
  * CAP 消息重试处理器
@@ -138,13 +139,8 @@ public class MessageRetryProcessor {
         }
     }
 
-    /**
-     * 处理发布消息
-     */
     private CompletableFuture<Void> processPublishedMessages() {
-        Duration lookbackSeconds = Duration.ofSeconds(properties.getFallbackWindowLookbackSeconds());
-        
-        return messageStorage.getPublishedMessagesOfNeedRetry(lookbackSeconds)
+        return messageStorage.getPublishedMessagesOfNeedRetry(Duration.ofSeconds(properties.getFallbackWindowLookbackSeconds()))
             .thenCompose(messages -> {
                 if (messages.isEmpty()) {
                     return CompletableFuture.completedFuture(null);
@@ -152,15 +148,27 @@ public class MessageRetryProcessor {
 
                 log.debug("Found {} published messages need retry", messages.size());
                 
-                List<CompletableFuture<Void>> futures = messages.stream()
-                    .map((Function<CapMessage, CompletableFuture<Void>>) message -> messageDispatcher.enqueueToPublish(message)
-                        .exceptionally(ex -> {
-                            log.error("Failed to enqueue published message for retry: {}", message.getId(), ex);
-                            return null;
-                        }))
-                    .toList();
+                // 批量更新状态为 RETRYING
+                return messageStorage.batchUpdatePublishedStatusAsync(
+                    CapMessageStatus.FAILED, 
+                    CapMessageStatus.RETRYING, 
+                    messages.size()
+                ).thenAccept(updatedCount -> {
+                    if (updatedCount > 0) {
+                        log.debug("Batch updated {} failed messages to RETRYING status", updatedCount);
+                        
+                        // 将消息重新入队到分发器
+                        List<CompletableFuture<Void>> futures = messages.stream()
+                            .map((Function<CapMessage, CompletableFuture<Void>>) message -> messageDispatcher.enqueueToPublish(message)
+                                .exceptionally(ex -> {
+                                    log.error("Failed to enqueue published message for retry: {}", message.getId(), ex);
+                                    return null;
+                                }))
+                            .toList();
 
-                return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                    }
+                });
             })
             .exceptionally(ex -> {
                 log.warn("Failed to get published messages for retry", ex);
@@ -168,27 +176,36 @@ public class MessageRetryProcessor {
             });
     }
 
-    /**
-     * 处理接收消息
-     */
     private CompletableFuture<Void> processReceivedMessages() {
-        Duration lookbackSeconds = Duration.ofSeconds(properties.getFallbackWindowLookbackSeconds());
-        
-        return messageStorage.getReceivedMessagesOfNeedRetry(lookbackSeconds)
+        return messageStorage.getReceivedMessagesOfNeedRetry(Duration.ofSeconds(properties.getFallbackWindowLookbackSeconds()))
             .thenCompose(messages -> {
                 if (messages.isEmpty()) {
                     return CompletableFuture.completedFuture(null);
                 }
 
-                List<CompletableFuture<Void>> futures = messages.stream()
-                    .map((Function<CapMessage, CompletableFuture<Void>>) message -> messageDispatcher.enqueueToExecute(message)
-                        .exceptionally(ex -> {
-                            log.error("Failed to enqueue received message for retry: {}", message.getId(), ex);
-                            return null;
-                        }))
-                    .toList();
+                log.debug("Found {} received messages need retry", messages.size());
+                
+                // 批量更新状态为 RETRYING
+                return messageStorage.batchUpdateReceivedStatusAsync(
+                    CapMessageStatus.FAILED, 
+                    CapMessageStatus.RETRYING, 
+                    messages.size()
+                ).thenAccept(updatedCount -> {
+                    if (updatedCount > 0) {
+                        log.debug("Batch updated {} failed received messages to RETRYING status", updatedCount);
+                        
+                        // 将消息重新入队到分发器
+                        List<CompletableFuture<Void>> futures = messages.stream()
+                            .map((Function<CapMessage, CompletableFuture<Void>>) message -> messageDispatcher.enqueueToExecute(message)
+                                .exceptionally(ex -> {
+                                    log.error("Failed to enqueue received message for retry: {}", message.getId(), ex);
+                                    return null;
+                                }))
+                            .toList();
 
-                return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                    }
+                });
             })
             .exceptionally(ex -> {
                 log.warn("Failed to get received messages for retry", ex);

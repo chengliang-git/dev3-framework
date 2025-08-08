@@ -473,4 +473,139 @@ public class RedisMessageStorage implements MessageStorage {
             }
         });
     }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdatePublishedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                int updatedCount = 0;
+                String publishedPattern = PUBLISHED_PREFIX + "*";
+                long cursor = 0;
+                do {
+                    var scanOptions = ScanOptions.scanOptions().match(publishedPattern).count(100).build();
+                    var scanResult = redisTemplate.scan(scanOptions);
+                    cursor = scanResult.getCursorId();
+                    
+                    while (scanResult.hasNext() && updatedCount < batchSize) {
+                        String key = scanResult.next();
+                        CapMessage message = (CapMessage) redisTemplate.opsForValue().get(key);
+                        if (message != null && message.getStatus() == fromStatus) {
+                            message.setStatus(toStatus);
+                            redisTemplate.opsForValue().set(key, message);
+                            updatedCount++;
+                        }
+                    }
+                } while (cursor != 0 && updatedCount < batchSize);
+                
+                if (updatedCount > 0) {
+                    log.debug("Batch updated {} published messages from {} to {}", updatedCount, fromStatus, toStatus);
+                }
+                return updatedCount;
+            } catch (Exception e) {
+                log.error("Error batch updating published message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdateReceivedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                int updatedCount = 0;
+                String receivedPattern = RECEIVED_PREFIX + "*";
+                long cursor = 0;
+                do {
+                    var scanOptions = ScanOptions.scanOptions().match(receivedPattern).count(100).build();
+                    var scanResult = redisTemplate.scan(scanOptions);
+                    cursor = scanResult.getCursorId();
+                    
+                    while (scanResult.hasNext() && updatedCount < batchSize) {
+                        String key = scanResult.next();
+                        CapMessage message = (CapMessage) redisTemplate.opsForValue().get(key);
+                        if (message != null && message.getStatus() == fromStatus) {
+                            message.setStatus(toStatus);
+                            redisTemplate.opsForValue().set(key, message);
+                            updatedCount++;
+                        }
+                    }
+                } while (cursor != 0 && updatedCount < batchSize);
+                
+                if (updatedCount > 0) {
+                    log.debug("Batch updated {} received messages from {} to {}", updatedCount, fromStatus, toStatus);
+                }
+                return updatedCount;
+            } catch (Exception e) {
+                log.error("Error batch updating received message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getExpiredDelayedMessagesAsync(int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<CapMessage> expiredMessages = new java.util.ArrayList<>();
+                String publishedPattern = PUBLISHED_PREFIX + "*";
+                long cursor = 0;
+                do {
+                    var scanOptions = ScanOptions.scanOptions().match(publishedPattern).count(100).build();
+                    var scanResult = redisTemplate.scan(scanOptions);
+                    cursor = scanResult.getCursorId();
+                    
+                    while (scanResult.hasNext() && expiredMessages.size() < batchSize) {
+                        String key = scanResult.next();
+                        CapMessage message = (CapMessage) redisTemplate.opsForValue().get(key);
+                        if (message != null && 
+                            message.getStatus() == CapMessageStatus.DELAYED &&
+                            message.getExpiresAt() != null && 
+                            message.getExpiresAt().isBefore(LocalDateTime.now())) {
+                            expiredMessages.add(message);
+                        }
+                    }
+                } while (cursor != 0 && expiredMessages.size() < batchSize);
+                
+                if (!expiredMessages.isEmpty()) {
+                    log.debug("Found {} expired delayed messages", expiredMessages.size());
+                }
+                return expiredMessages;
+            } catch (Exception e) {
+                log.error("Error getting expired delayed messages", e);
+                return List.of();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getPendingPublishedMessagesAsync(CapMessageStatus status, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<CapMessage> pendingMessages = new java.util.ArrayList<>();
+                String publishedPattern = PUBLISHED_PREFIX + "*";
+                long cursor = 0;
+                do {
+                    var scanOptions = ScanOptions.scanOptions().match(publishedPattern).count(100).build();
+                    var scanResult = redisTemplate.scan(scanOptions);
+                    cursor = scanResult.getCursorId();
+                    
+                    while (scanResult.hasNext() && pendingMessages.size() < batchSize) {
+                        String key = scanResult.next();
+                        CapMessage message = (CapMessage) redisTemplate.opsForValue().get(key);
+                        if (message != null && message.getStatus() == status) {
+                            pendingMessages.add(message);
+                        }
+                    }
+                } while (cursor != 0 && pendingMessages.size() < batchSize);
+                
+                if (!pendingMessages.isEmpty()) {
+                    log.debug("Found {} pending published messages with status {}", pendingMessages.size(), status);
+                }
+                return pendingMessages;
+            } catch (Exception e) {
+                log.error("Error getting pending published messages with status {}", status, e);
+                return List.of();
+            }
+        });
+    }
 } 

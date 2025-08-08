@@ -5,13 +5,14 @@ import com.guanwei.framework.cap.CapProperties;
 import com.guanwei.framework.cap.queue.MessageQueue;
 import com.guanwei.framework.cap.storage.MessageStorage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
+import com.guanwei.framework.cap.CapMessageStatus;
 
 /**
  * CAP 消息分发器默认实现
@@ -42,7 +43,6 @@ public class DefaultMessageDispatcher implements MessageDispatcher {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
 
-    @Autowired
     public DefaultMessageDispatcher(CapProperties properties,
                                    MessageStorage messageStorage,
                                    MessageQueue messageQueue,
@@ -200,27 +200,66 @@ public class DefaultMessageDispatcher implements MessageDispatcher {
      * 处理发布消息
      */
     private void processPublishMessages() {
-        while (running.get() && !Thread.currentThread().isInterrupted()) {
+        while (!stopping.get() && !Thread.currentThread().isInterrupted()) {
             try {
+                // 从队列中获取消息
                 CapMessage message = publishedQueue.poll(1, TimeUnit.SECONDS);
                 if (message != null) {
-                    messageSender.sendAsync(message)
+                    // 发送消息
+                    messageSender.sendAsync(message, properties.getPublishTimeout())
                         .thenAccept(result -> {
-                            if (!result.isSucceeded()) {
-                                log.error("Failed to send message: {}, error: {}", 
-                                        message.getId(), result.getError());
+                            if (result.isSuccess()) {
+                                log.debug("Message {} sent successfully", message.getId());
+                            } else {
+                                log.error("Failed to send message {}: {}", message.getId(), result.getError());
                             }
                         })
                         .exceptionally(ex -> {
-                            log.error("Error sending message: {}", message.getId(), ex);
+                            log.error("Error sending message {}", message.getId(), ex);
                             return null;
                         });
                 }
+
+                // 处理存储中的待发送消息（.NET CAP 兼容的批量处理）
+                if (properties.getSchedulerBatchSize() > 0 && publishedQueue.size() < properties.getSchedulerBatchSize() / 2) {
+                    messageStorage.getPendingPublishedMessagesAsync(CapMessageStatus.PENDING, properties.getSchedulerBatchSize())
+                        .thenAccept(pendingMessages -> {
+                            if (!pendingMessages.isEmpty()) {
+                                log.debug("Found {} pending messages from storage", pendingMessages.size());
+                                
+                                // 批量更新状态为 QUEUED
+                                messageStorage.batchUpdatePublishedStatusAsync(
+                                    CapMessageStatus.PENDING, 
+                                    CapMessageStatus.QUEUED, 
+                                    pendingMessages.size()
+                                ).thenAccept(updatedCount -> {
+                                    if (updatedCount > 0) {
+                                        log.debug("Batch updated {} pending messages to QUEUED status", updatedCount);
+                                        
+                                        // 将消息加入发布队列
+                                        for (CapMessage pendingMessage : pendingMessages) {
+                                            try {
+                                                publishedQueue.offer(pendingMessage, 100, TimeUnit.MILLISECONDS);
+                                            } catch (InterruptedException e) {
+                                                Thread.currentThread().interrupt();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            log.error("Error processing pending messages from storage", ex);
+                            return null;
+                        });
+                }
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                log.error("Error processing publish message", e);
+                log.error("Error in publish message processing", e);
             }
         }
     }
@@ -253,31 +292,67 @@ public class DefaultMessageDispatcher implements MessageDispatcher {
      */
     private void processScheduledMessages() {
         try {
-            LocalDateTime now = LocalDateTime.now();
-            java.util.List<ScheduledMessage> readyMessages = new ArrayList<>();
-            
-            // 安全地从队列中获取消息
+            // 处理内存中的延迟消息
+            List<ScheduledMessage> readyMessages = new ArrayList<>();
             ScheduledMessage message;
             while ((message = scheduledQueue.poll()) != null) {
-                if (message.publishTime.isBefore(now) || message.publishTime.isEqual(now)) {
+                if (message.publishTime.isBefore(LocalDateTime.now()) || 
+                    message.publishTime.isEqual(LocalDateTime.now())) {
                     readyMessages.add(message);
                 } else {
-                    // 如果消息还没到时间，重新放回队列
                     scheduledQueue.offer(message);
-                    break; // 由于是优先级队列，后面的消息时间更晚，可以退出
+                    break;
                 }
             }
 
+            // 将到期的延迟消息加入发布队列
             for (ScheduledMessage scheduledMessage : readyMessages) {
-                enqueueToPublish(scheduledMessage.message)
+                try {
+                    publishedQueue.offer(scheduledMessage.message, 100, TimeUnit.MILLISECONDS);
+                    log.debug("Scheduled message {} moved to publish queue", scheduledMessage.message.getId());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            // 处理存储中的延迟消息（.NET CAP 兼容的表驱动方式）
+            if (properties.getSchedulerBatchSize() > 0) {
+                messageStorage.getExpiredDelayedMessagesAsync(properties.getSchedulerBatchSize())
+                    .thenAccept(expiredMessages -> {
+                        if (!expiredMessages.isEmpty()) {
+                            log.debug("Found {} expired delayed messages from storage", expiredMessages.size());
+                            
+                            // 批量更新状态为 PENDING
+                            messageStorage.batchUpdatePublishedStatusAsync(
+                                CapMessageStatus.DELAYED, 
+                                CapMessageStatus.PENDING, 
+                                expiredMessages.size()
+                            ).thenAccept(updatedCount -> {
+                                if (updatedCount > 0) {
+                                    log.debug("Batch updated {} delayed messages to PENDING status", updatedCount);
+                                    
+                                    // 将消息加入发布队列
+                                    for (CapMessage expiredMessage : expiredMessages) {
+                                        try {
+                                            publishedQueue.offer(expiredMessage, 100, TimeUnit.MILLISECONDS);
+                                        } catch (InterruptedException e) {
+                                            Thread.currentThread().interrupt();
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    })
                     .exceptionally(ex -> {
-                        log.error("Error enqueueing scheduled message: {}", 
-                                scheduledMessage.message.getId(), ex);
+                        log.error("Error processing expired delayed messages from storage", ex);
                         return null;
                     });
             }
+
         } catch (Exception e) {
-            log.error("Error processing scheduled messages", e);
+            log.error("Error in scheduled message processing", e);
         }
     }
 

@@ -389,4 +389,95 @@ public class MemoryMessageStorage implements MessageStorage {
             return null;
         }
     }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdatePublishedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                int updatedCount = 0;
+                for (CapMessage message : publishedMessages.values()) {
+                    if (updatedCount >= batchSize) {
+                        break;
+                    }
+                    if (message.getStatus() == fromStatus) {
+                        message.setStatus(toStatus);
+                        updatedCount++;
+                    }
+                }
+                if (updatedCount > 0) {
+                    log.debug("Batch updated {} published messages from {} to {}", updatedCount, fromStatus, toStatus);
+                }
+                return updatedCount;
+            } catch (Exception e) {
+                log.error("Error batch updating published message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> batchUpdateReceivedStatusAsync(CapMessageStatus fromStatus, CapMessageStatus toStatus, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                int updatedCount = 0;
+                for (CapMessage message : receivedMessages.values()) {
+                    if (updatedCount >= batchSize) {
+                        break;
+                    }
+                    if (message.getStatus() == fromStatus) {
+                        message.setStatus(toStatus);
+                        updatedCount++;
+                    }
+                }
+                if (updatedCount > 0) {
+                    log.debug("Batch updated {} received messages from {} to {}", updatedCount, fromStatus, toStatus);
+                }
+                return updatedCount;
+            } catch (Exception e) {
+                log.error("Error batch updating received message status from {} to {}", fromStatus, toStatus, e);
+                return 0;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getExpiredDelayedMessagesAsync(int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<CapMessage> expiredMessages = publishedMessages.values().stream()
+                    .filter(message -> message.getStatus() == CapMessageStatus.DELAYED)
+                    .filter(message -> message.getExpiresAt() != null && message.getExpiresAt().isBefore(LocalDateTime.now()))
+                    .limit(batchSize)
+                    .collect(Collectors.toList());
+                
+                if (!expiredMessages.isEmpty()) {
+                    log.debug("Found {} expired delayed messages", expiredMessages.size());
+                }
+                return expiredMessages;
+            } catch (Exception e) {
+                log.error("Error getting expired delayed messages", e);
+                return List.of();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CapMessage>> getPendingPublishedMessagesAsync(CapMessageStatus status, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<CapMessage> pendingMessages = publishedMessages.values().stream()
+                    .filter(message -> message.getStatus() == status)
+                    .limit(batchSize)
+                    .collect(Collectors.toList());
+                
+                if (!pendingMessages.isEmpty()) {
+                    log.debug("Found {} pending published messages with status {}", pendingMessages.size(), status);
+                }
+                return pendingMessages;
+            } catch (Exception e) {
+                log.error("Error getting pending published messages with status {}", status, e);
+                return List.of();
+            }
+        });
+    }
 }

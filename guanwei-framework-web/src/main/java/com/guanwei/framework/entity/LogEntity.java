@@ -1,18 +1,16 @@
 package com.guanwei.framework.entity;
 
-import com.guanwei.framework.common.entity.BaseMongoEntity;
+import com.guanwei.framework.common.entity.BaseEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
- * 日志实体（MongoDB示例）
+ * 日志实体（示例）
  *
  * @author Enterprise Framework
  * @since 1.0.0
  */
 @Schema(description = "日志实体")
-@Document(collection = "system_logs")
-public class LogEntity extends BaseMongoEntity {
+public class LogEntity extends BaseEntity {
 
     @Schema(description = "日志级别")
     private String level;

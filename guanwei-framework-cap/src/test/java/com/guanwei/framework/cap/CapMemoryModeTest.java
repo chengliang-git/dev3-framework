@@ -17,7 +17,8 @@ class CapMemoryModeTest {
         var queue = new MemoryMessageQueue();
         var txMgr = new com.guanwei.framework.cap.impl.CapTransactionManagerImpl();
 
-        var publisher = new com.guanwei.framework.cap.impl.CapPublisherImpl(queue, storage, props, txMgr);
+        var dispatcher = new com.guanwei.framework.cap.processor.DefaultMessageDispatcher(props, storage, queue, null, null);
+        var publisher = new com.guanwei.framework.cap.impl.CapPublisherImpl(queue, storage, props, txMgr, dispatcher);
         var subscriber = new com.guanwei.framework.cap.impl.CapSubscriberImpl(storage, queue, props,
                 new com.guanwei.framework.cap.queue.CapQueueManager(null, "ex", "topic", "test", "v1"));
 
