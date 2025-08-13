@@ -1,241 +1,255 @@
-# Guanwei Framework
-
-[![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://openjdk.java.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.12-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Maven](https://img.shields.io/badge/Maven-3.6+-blue.svg)](https://maven.apache.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+# 企业级微服务开发框架
 
 ## 概述
 
-Guanwei Framework 是一个企业级 Spring Boot 框架，提供了完整的开发基础设施，包括安全认证、数据访问、代码生成、API 文档等功能。
+这是一个基于Spring Boot的企业级微服务开发框架，提供了完整的微服务开发基础设施和常用功能组件。
 
-## ✨ 特性
+## 主要功能特性
 
-- 🚀 **快速开发**: 基于 Spring Boot 3.2.12，开箱即用
-- 🔐 **安全认证**: JWT 无状态认证，支持角色权限控制
-- 🗄️ **数据访问**: 支持 Oracle 和 MongoDB 双数据库
-- 📝 **代码生成**: 自动生成 CRUD 代码，提高开发效率
-- 📚 **API 文档**: 集成 Knife4j，自动生成 API 文档
-- 🎯 **统一规范**: 统一的返回格式、异常处理、日志记录
-- 🔧 **配置管理**: 支持 Apollo 配置中心，环境隔离
-- 📦 **模块化**: 清晰的模块划分，便于维护和扩展
+### 1. 核心框架功能
+- **Spring Boot 3.x** - 现代化的Spring Boot框架
+- **Maven** - 项目构建和依赖管理
+- **Lombok** - 代码生成和简化
 
-## 🏗️ 架构设计
+### 2. 安全认证
+- **JWT认证** - 基于Token的身份认证
+- **Spring Security** - 安全框架集成
+- **跨域配置** - 可配置的CORS支持
+- **权限控制** - 基于角色的访问控制
+
+### 3. 数据访问
+- **MyBatis Plus** - 增强的MyBatis ORM框架
+- **MongoDB支持** - NoSQL数据库支持
+- **Oracle支持** - 企业级数据库支持
+- **Redis缓存** - 分布式缓存支持
+
+### 4. 消息队列
+- **RabbitMQ** - 消息队列集成
+- **CAP框架** - 分布式事务和事件总线
+
+### 5. 监控和文档
+- **Knife4j** - API文档生成（Swagger/OpenAPI）
+- **Apollo配置中心** - 分布式配置管理
+- **健康检查** - 应用健康状态监控
+
+### 6. 新增功能（最新优化）
+
+#### 6.1 异步任务处理
+- **异步执行** - 支持@Async注解的异步方法执行
+- **定时任务** - 支持@Scheduled注解的定时任务
+- **线程池管理** - 可配置的线程池参数
+- **任务监控** - 异步任务执行状态监控
+
+#### 6.2 缓存管理
+- **多级缓存** - Redis + Caffeine + 内存缓存
+- **缓存策略** - 可配置的缓存策略和过期时间
+- **缓存注解** - 支持@Cache注解的方法级缓存
+- **缓存统计** - 缓存命中率和性能统计
+
+#### 6.3 监控和可观测性
+- **Micrometer** - 应用指标收集
+- **健康检查** - 系统、数据库、Redis健康状态
+- **链路追踪** - 分布式请求链路追踪
+- **性能监控** - 方法执行时间监控
+
+#### 6.4 数据验证
+- **统一验证** - 基于Bean Validation的数据验证
+- **自定义验证器** - 扩展的验证规则
+- **验证注解** - 丰富的验证注解支持
+
+#### 6.5 国际化支持
+- **多语言** - 支持中文和英文
+- **消息缓存** - 国际化消息缓存机制
+- **动态切换** - 运行时语言切换
+
+#### 6.6 API版本管理
+- **版本控制** - 支持API版本管理
+- **向后兼容** - 版本兼容性检查
+- **版本注解** - @ApiVersion注解支持
+
+#### 6.7 限流和熔断
+- **限流控制** - 基于Bucket4j的令牌桶限流
+- **熔断器** - 基于Resilience4j的熔断器
+- **重试机制** - 可配置的重试策略
+- **超时控制** - 方法执行超时控制
+
+#### 6.8 文件管理（新增）
+- **统一存储** - 支持本地存储和S3存储
+- **S3集成** - 完整的Amazon S3兼容存储支持
+- **文件处理** - 文件压缩、缩略图、水印等
+- **安全验证** - 文件类型和大小验证
+- **预签名URL** - S3预签名下载URL生成
+- **批量操作** - 支持批量文件上传下载
+
+#### 6.9 分布式锁（新增）
+- **Redis分布式锁** - 基于Redis的分布式锁实现
+- **锁管理** - 锁的获取、释放、续期管理
+- **重试机制** - 锁获取失败时的重试策略
+- **看门狗机制** - 防止死锁的自动释放机制
+
+## 项目结构
 
 ```
-guanwei-framework/
-├── guanwei-framework-common/     # 公共模块
-├── guanwei-framework-security/   # 安全模块
-├── guanwei-framework-cap/        # CAP模块
-├── guanwei-framework-generator/  # 代码生成器
-├── guanwei-framework-starter/    # 自动配置模块
-├── guanwei-framework-web/        # Web示例模块
-└── business-system-example/      # 业务系统示例
+dev3-framework/
+├── business-system-example/          # 业务系统示例
+├── guanwei-auth-service/             # 认证服务
+├── guanwei-framework-cap/            # CAP框架模块
+├── guanwei-framework-common/         # 通用模块
+├── guanwei-framework-generator/      # 代码生成器
+├── guanwei-framework-security/       # 安全模块
+├── guanwei-framework-starter/        # 框架启动器
+├── guanwei-framework-web/            # Web模块
+└── guanwei-tles-case-transfer/       # 案例转移服务
 ```
 
-## 🚀 快速开始
+## 快速开始
 
-### 环境要求
+### 1. 环境要求
+- JDK 17+
+- Maven 3.6+
+- Redis 6.0+
+- RabbitMQ 3.8+
 
-- **Java**: 17 或更高版本
-- **Maven**: 3.6 或更高版本
-- **数据库**: Oracle 19c+ / MongoDB 4.4+
-- **Redis**: 6.0+ (可选)
-- **RabbitMQ**: 3.8+ (可选)
+### 2. 配置说明
 
-### 1. 部署框架到本地仓库
-
-```bash
-# 克隆项目
-git clone <repository-url>
-cd guanwei-framework
-
-# 部署到本地仓库
-chmod +x scripts/deploy-to-local-repo.sh
-./scripts/deploy-to-local-repo.sh
-```
-
-### 2. 创建新项目
-
-#### 2.1 添加依赖
-
-```xml
-<dependency>
-    <groupId>com.guanwei</groupId>
-    <artifactId>guanwei-framework-starter</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
-
-#### 2.2 创建实体类
-
-```java
-@TableName("t_user")
-public class User extends BaseEntity {
-    private String username;
-    private String realName;
-    // getter/setter
-}
-```
-
-#### 2.3 创建 Controller
-
-```java
-@RestController
-@RequestMapping("/users")
-public class UserController extends BaseController<UserService, User> {
-}
-```
-
-#### 2.4 运行项目
-
-```bash
-mvn spring-boot:run
-```
-
-访问：http://localhost:8080/doc.html
-
-## 📖 详细文档
-
-- [快速开始指南](./docs/QUICK_START.md)
-- [企业级优化说明](./docs/ENTERPRISE_OPTIMIZATION.md)
-- [架构优化说明](./docs/ARCHITECTURE_OPTIMIZATION.md)
-
-## 🛠️ 技术栈
-
-- **核心框架**: Spring Boot 3.2.12
-- **安全框架**: Spring Security + JWT
-- **数据访问**: MyBatis Plus + Oracle/MongoDB
-- **缓存**: Redis + Caffeine
-- **消息队列**: RabbitMQ
-- **API 文档**: Knife4j (Swagger)
-- **配置中心**: Apollo
-- **代码生成**: MyBatis Plus Generator
-
-## 🎯 核心功能
-
-### 1. 统一数据访问层
-
-```java
-// 继承基础Repository
-public interface UserRepository extends BaseRepository<UserMapper, User> {
-    // 自动获得CRUD操作
-}
-
-// 继承基础Service
-public interface UserService extends BaseService<User> {
-    // 自动获得业务操作
-}
-
-// 继承基础Controller
-public class UserController extends BaseController<UserService, User> {
-    // 自动获得REST API
-}
-```
-
-### 2. 统一返回结果
-
-```java
-// 成功返回
-return Result.success(data);
-
-// 失败返回
-return Result.error("错误信息");
-```
-
-### 3. 全局异常处理
-
-```java
-// 抛出业务异常
-throw new BusinessException("用户不存在");
-
-// 自动被全局异常处理器捕获
-```
-
-### 4. 代码生成器
-
-```java
-// 生成代码
-codeGenerator.generateCode("t_user", "t_role", "t_permission");
-```
-
-## 🔧 配置说明
-
-### 数据库配置
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:oracle:thin:@localhost:1521:XE
-    username: your_username
-    password: your_password
-    driver-class-name: oracle.jdbc.OracleDriver
-```
-
-### 安全配置
-
+#### 2.1 S3文件存储配置
 ```yaml
 framework:
-  security:
-    permit-all-paths:
-      - /api/auth/login
-      - /doc.html
+  file-management:
+    enabled: true
+    storage-type: s3
+    s3:
+      bucket-name: "your-bucket"
+      service-url: "http://your-s3-endpoint"
+      access-key: "your-access-key"
+      secret-key: "your-secret-key"
+      region: "your-region"
+      signature-version: 2
+      pre-signed-url: true
+      pre-signed-expiry: 24
 ```
 
-## 📦 模块说明
+#### 2.2 分布式锁配置
+```yaml
+framework:
+  distributed-lock:
+    enabled: true
+    lock-prefix: "lock:"
+    default-timeout: 30000
+    max-retries: 3
+    retry-delay: 1000
+    enable-watchdog: true
+```
 
-### guanwei-framework-common
+#### 2.3 限流配置
+```yaml
+framework:
+  rate-limit:
+    enabled: true
+    default-capacity: 100
+    default-refill-tokens: 10
+    default-refill-period: 1000
+    strategy: "token-bucket"
+```
 
-公共模块，包含：
+#### 2.4 熔断器配置
+```yaml
+framework:
+  circuit-breaker:
+    enabled: true
+    failure-rate-threshold: 50
+    minimum-number-of-calls: 10
+    wait-duration-in-open-state: 60000
+```
 
-- 基础实体类 (BaseEntity, BaseMongoEntity)
-- 统一返回结果 (Result)
-- 异常处理 (BusinessException, GlobalExceptionHandler)
-- 基础服务接口 (BaseService, BaseMongoService)
-- 基础控制器 (BaseController, BaseMongoController)
+### 3. 使用示例
 
-### guanwei-framework-security
+#### 3.1 文件上传
+```java
+@PostMapping("/upload")
+public Result<FileUploadResult> uploadFile(@RequestParam("file") MultipartFile file) {
+    try {
+        FileUploadResult result = fileUploadService.uploadFile(file);
+        return Result.success(result);
+    } catch (Exception e) {
+        return Result.error("文件上传失败: " + e.getMessage());
+    }
+}
+```
 
-安全模块，包含：
+#### 3.2 分布式锁使用
+```java
+@Autowired
+private DistributedLockService distributedLockService;
 
-- JWT 认证
-- 权限控制
-- 安全配置
+public void executeWithLock() {
+    distributedLockService.executeWithLock(
+        "business-lock",
+        30,
+        TimeUnit.SECONDS,
+        () -> {
+            // 需要加锁的业务逻辑
+            return "success";
+        }
+    );
+}
+```
 
-### guanwei-framework-starter
+#### 3.3 缓存使用
+```java
+@Cache(key = "user", prefix = "user:", expire = 3600)
+public User getUserById(Long id) {
+    return userMapper.selectById(id);
+}
+```
 
-自动配置模块，包含：
+#### 3.4 异步任务
+```java
+@AsyncTask(name = "dataProcessing", executor = "ioTaskExecutor")
+public void processDataAsync() {
+    // 异步处理逻辑
+}
+```
 
-- 数据库配置 (Oracle, MongoDB)
-- 缓存配置 (Redis)
-- 消息队列配置 (RabbitMQ)
-- API 文档配置 (Knife4j)
+## 配置热更新
 
-### guanwei-framework-generator
+框架支持配置热更新，通过Apollo配置中心可以动态修改配置参数，无需重启应用。
 
-代码生成器，包含：
+## 监控和运维
 
-- 实体类模板
-- 服务类模板
-- 控制器模板
-- Mapper 模板
+- **健康检查端点**: `/actuator/health`
+- **指标端点**: `/actuator/metrics`
+- **API文档**: `/doc.html`
+- **文件管理**: `/api/v1/files/**`
 
-## 🤝 贡献指南
+## 最佳实践
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
+1. **配置管理**: 使用Apollo配置中心管理配置
+2. **缓存策略**: 合理使用多级缓存提升性能
+3. **异步处理**: 对于耗时操作使用异步处理
+4. **限流保护**: 为关键接口配置限流保护
+5. **熔断器**: 为外部服务调用配置熔断器
+6. **文件存储**: 生产环境建议使用S3等云存储
+7. **分布式锁**: 合理使用分布式锁避免并发问题
 
-## 📄 许可证
+## 扩展开发
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+框架采用模块化设计，可以方便地扩展新功能：
 
-## 📞 联系我们
+1. 在`guanwei-framework-starter`中添加新的配置类
+2. 在`guanwei-framework-common`中添加通用工具类
+3. 在相应的模块中添加业务逻辑
 
-- 项目主页: [GitHub Repository](https://github.com/your-org/guanwei-framework)
-- 问题反馈: [Issues](https://github.com/your-org/guanwei-framework/issues)
-- 文档地址: [Documentation](./docs/)
+## 版本历史
 
-## ⭐ 如果这个项目对你有帮助，请给我们一个星标！
+- **v1.0.0** - 基础框架功能
+- **v1.1.0** - 新增异步任务、缓存管理、监控功能
+- **v1.2.0** - 新增文件管理、分布式锁、限流熔断功能
+
+## 贡献指南
+
+欢迎提交Issue和Pull Request来改进框架。
+
+## 许可证
+
+本项目采用MIT许可证。

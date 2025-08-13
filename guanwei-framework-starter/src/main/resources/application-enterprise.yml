@@ -1,0 +1,331 @@
+# 企业级微服务框架完整配置示例
+framework:
+  # 安全配置
+  security:
+    permit-all-paths:
+      - "/auth/login"
+      - "/auth/register"
+      - "/doc.html"
+      - "/webjars/**"
+      - "/swagger-resources/**"
+      - "/v3/api-docs/**"
+      - "/actuator/**"
+      - "/health"
+      - "/info"
+    cors:
+      allowed-origins:
+        - "http://localhost:3000"
+        - "https://yourdomain.com"
+      allowed-methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "OPTIONS"
+      allowed-headers:
+        - "Authorization"
+        - "Content-Type"
+        - "X-Requested-With"
+        - "X-API-Version"
+      allow-credentials: true
+      max-age: 3600
+    jwt:
+      secret: "your-super-secret-jwt-key-2024"
+      expiration: 86400000
+      header: "Authorization"
+      prefix: "Bearer "
+
+  # 异步任务配置
+  async:
+    core-pool-size: 20
+    max-pool-size: 50
+    queue-capacity: 1000
+    keep-alive-seconds: 120
+    scheduler-pool-size: 10
+    enable-async: true
+    enable-scheduling: true
+
+  # 缓存配置
+  cache:
+    type: "redis"
+    default-ttl: 7200
+    max-size: 2000
+
+  # 监控配置
+  monitor:
+    enable-metrics: true
+    enable-health-check: true
+    enable-tracing: true
+    metrics-endpoint: "/actuator/metrics"
+    health-endpoint: "/actuator/health"
+    metrics-collection-interval: 30000
+
+  # 国际化配置
+  i18n:
+    default-locale: "zh_CN"
+    default-timezone: "Asia/Shanghai"
+    supported-locales:
+      - "zh_CN"
+      - "en_US"
+    enable-i18n: true
+    message-cache-seconds: 7200
+
+  # API版本配置
+  api-version:
+    default-version: "v1"
+    supported-versions:
+      - "v1"
+      - "v2"
+      - "v3"
+    enable-versioning: true
+    version-header: "X-API-Version"
+    version-param: "version"
+
+  # 限流配置
+  rate-limit:
+    enabled: true
+    default-capacity: 200
+    default-refill-tokens: 20
+    default-refill-period: 1000
+    strategy: "token-bucket"
+    enable-redis: true
+    redis-key-prefix: "rate_limit:"
+    redis-expire-seconds: 7200
+
+  # 熔断器配置
+  circuit-breaker:
+    enabled: true
+    failure-rate-threshold: 50
+    minimum-number-of-calls: 20
+    sliding-window-size: 100
+    wait-duration-in-open-state: 60000
+    permitted-number-of-calls-in-half-open-state: 5
+    automatic-transition-from-open-to-half-open-enabled: true
+    record-exceptions: true
+    ignore-exceptions: false
+
+  # 文件管理配置
+  file-management:
+    enabled: true
+    storage-type: "s3"
+    max-file-size: 100MB
+    max-request-size: 1GB
+    allowed-extensions:
+      - "jpg"
+      - "jpeg"
+      - "png"
+      - "gif"
+      - "bmp"
+      - "webp"
+      - "pdf"
+      - "doc"
+      - "docx"
+      - "xls"
+      - "xlsx"
+      - "ppt"
+      - "pptx"
+      - "txt"
+      - "zip"
+      - "rar"
+      - "7z"
+      - "tar"
+      - "gz"
+    enable-compression: true
+    compression-quality: "0.8"
+    enable-thumbnail: true
+    thumbnail-width: 200
+    thumbnail-height: 200
+    enable-watermark: false
+    watermark-text: "Enterprise Framework"
+    watermark-position: "bottom-right"
+    s3:
+      bucket-name: "your-enterprise-bucket"
+      service-url: "https://your-s3-endpoint"
+      access-key: "your-access-key"
+      secret-key: "your-secret-key"
+      region: "us-east-1"
+      signature-version: 2
+      encode-key: false
+      http-server: "/files"
+      allowed-file-types: "jpg,jpeg,png,bmp,doc,docx,xls,xlsx,pdf"
+      url-prefix: "https://your-s3-endpoint"
+      pre-signed-url: true
+      pre-signed-expiry: 24
+
+  # 分布式锁配置
+  distributed-lock:
+    enabled: true
+    lock-prefix: "lock:"
+    default-timeout: 30000
+    default-time-unit: MILLISECONDS
+    max-retries: 5
+    retry-delay: 1000
+    enable-watchdog: true
+    watchdog-interval: 10000
+    enable-lock-renewal: true
+    lock-renewal-threshold: 10000
+
+  # 审计配置
+  audit:
+    enabled: true
+    storage-type: "database"
+    enable-login-audit: true
+    enable-operation-audit: true
+    enable-data-change-audit: true
+    exclude-operations:
+      - "QUERY"
+      - "READ"
+    retention-days: 1095
+    enable-real-time-audit: true
+    audit-queue: "audit-queue"
+
+  # API网关配置
+  gateway:
+    enabled: false
+    default-route: "/api/**"
+    enable-load-balancing: true
+    enable-rate-limiting: true
+    enable-circuit-breaker: true
+    enable-metrics: true
+    routes:
+      - id: "user-service"
+        path: "/api/users/**"
+        service-id: "user-service"
+        strip-prefix: true
+        order: 1
+      - id: "order-service"
+        path: "/api/orders/**"
+        service-id: "order-service"
+        strip-prefix: true
+        order: 2
+    cors:
+      allowed-origins:
+        - "*"
+      allowed-methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "OPTIONS"
+      allowed-headers:
+        - "*"
+      allow-credentials: true
+      max-age: 3600
+
+  # 服务发现配置
+  service-discovery:
+    enabled: false
+    registry-type: "consul"
+    registry-url: "http://localhost:8500"
+    heartbeat-interval: 30000
+    health-check-interval: 60000
+    enable-auto-registration: true
+    enable-health-check: true
+    service-name: "enterprise-framework"
+    service-version: "1.0.0"
+    service-group: "enterprise"
+    metadata:
+      environment: "production"
+      region: "us-east-1"
+      zone: "zone-1"
+
+# Spring Boot配置
+spring:
+  application:
+    name: "enterprise-framework"
+  
+  # 数据源配置
+  datasource:
+    url: "jdbc:mysql://localhost:3306/enterprise_framework?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai"
+    username: "root"
+    password: "password"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Redis配置
+  redis:
+    host: "localhost"
+    port: 6379
+    database: 0
+    password: ""
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 20
+        max-wait: -1ms
+        max-idle: 10
+        min-idle: 5
+
+  # RabbitMQ配置
+  rabbitmq:
+    host: "localhost"
+    port: 5672
+    username: "guest"
+    password: "guest"
+    virtual-host: "/"
+    listener:
+      simple:
+        concurrency: 5
+        max-concurrency: 20
+        prefetch: 1
+        default-requeue-rejected: false
+
+  # MongoDB配置
+  data:
+    mongodb:
+      host: "localhost"
+      port: 27017
+      database: "enterprise_framework"
+      username: ""
+      password: ""
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1GB
+      enabled: true
+      file-size-threshold: 2KB
+      location: "${java.io.tmpdir}"
+
+# 日志配置
+logging:
+  level:
+    com.guanwei.framework: INFO
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: "logs/enterprise-framework.log"
+    max-size: 100MB
+    max-history: 30
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: "/actuator"
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: "${spring.application.name}"
+      environment: "production"

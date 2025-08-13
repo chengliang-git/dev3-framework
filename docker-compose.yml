@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  # Oracle数据库
+  oracle:
+    image: container-registry.oracle.com/database/express:21.3.0-xe
+    container_name: framework-oracle
+    environment:
+      ORACLE_PWD: framework123
+      ORACLE_CHARACTERSET: AL32UTF8
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+      - ./scripts/init-oracle.sql:/opt/oracle/scripts/startup/init-oracle.sql
+    healthcheck:
+      test: ["CMD", "sqlplus", "-L", "framework/framework123@//localhost:1521/XE", "@healthcheck.sql"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis缓存
+  redis:
+    image: redis:7.2-alpine
+    container_name: framework-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # RabbitMQ消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: framework-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MinIO对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: framework-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: framework-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: framework-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+
+  # Jaeger链路追踪
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: framework-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+
+  # Elasticsearch日志存储
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: framework-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana日志可视化
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: framework-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # Logstash日志收集
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: framework-logstash
+    volumes:
+      - ./config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./config/logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    depends_on:
+      - elasticsearch
+
+  # Apollo配置中心
+  apollo-configservice:
+    image: apolloconfig/apollo-configservice:latest
+    container_name: framework-apollo-configservice
+    environment:
+      SPRING_PROFILES_ACTIVE: github
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - apollo-mysql
+
+  # Apollo管理服务
+  apollo-adminservice:
+    image: apolloconfig/apollo-adminservice:latest
+    container_name: framework-apollo-adminservice
+    environment:
+      SPRING_PROFILES_ACTIVE: github
+      SERVER_PORT: 8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - apollo-mysql
+
+  # Apollo门户
+  apollo-portal:
+    image: apolloconfig/apollo-portal:latest
+    container_name: framework-apollo-portal
+    environment:
+      SPRING_PROFILES_ACTIVE: github
+      SERVER_PORT: 8070
+    ports:
+      - "8070:8070"
+    depends_on:
+      - apollo-mysql
+
+  # Apollo MySQL
+  apollo-mysql:
+    image: mysql:8.0
+    container_name: framework-apollo-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: ApolloPortalDB
+      MYSQL_USER: apollo
+      MYSQL_PASSWORD: apollo123
+    ports:
+      - "3306:3306"
+    volumes:
+      - apollo_mysql_data:/var/lib/mysql
+      - ./scripts/init-apollo.sql:/docker-entrypoint-initdb.d/init-apollo.sql
+
+volumes:
+  oracle_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+  apollo_mysql_data:
+
+networks:
+  default:
+    name: framework-network

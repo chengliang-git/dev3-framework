@@ -1,0 +1,107 @@
+# S3文件存储配置示例
+framework:
+  file-management:
+    enabled: true
+    storage-type: s3
+    max-file-size: 100MB
+    max-request-size: 1GB
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - bmp
+      - webp
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - zip
+      - rar
+      - 7z
+      - tar
+      - gz
+    enable-compression: true
+    compression-quality: "0.8"
+    enable-thumbnail: true
+    thumbnail-width: 200
+    thumbnail-height: 200
+    enable-watermark: false
+    watermark-text: "Enterprise Framework"
+    watermark-position: "bottom-right"
+    s3:
+      bucket-name: "test"
+      service-url: "http://10.21.16.110:8088"
+      access-key: "M01R8XX84WG1DFTT82MZ"
+      secret-key: "klWOBJyJ74CHy9lWsklW09n56M7HCB4TVlzMmo2H"
+      region: "ap-east-1"
+      signature-version: 2
+      encode-key: false
+      http-server: "/tles-files"
+      allowed-file-types: "jpg,jpeg,png,bmp,doc,docx,xls,xlsx,pdf"
+      url-prefix: "http://10.21.16.110:8088"
+      pre-signed-url: true
+      pre-signed-expiry: 24
+
+  # 分布式锁配置
+  distributed-lock:
+    enabled: true
+    lock-prefix: "lock:"
+    default-timeout: 30000
+    default-time-unit: MILLISECONDS
+    max-retries: 3
+    retry-delay: 1000
+    enable-watchdog: true
+    watchdog-interval: 10000
+    enable-lock-renewal: true
+    lock-renewal-threshold: 10000
+
+  # 限流配置
+  rate-limit:
+    enabled: true
+    default-capacity: 100
+    default-refill-tokens: 10
+    default-refill-period: 1000
+    strategy: "token-bucket"
+    enable-redis: true
+    redis-key-prefix: "rate_limit:"
+    redis-expire-seconds: 3600
+
+  # 熔断器配置
+  circuit-breaker:
+    enabled: true
+    failure-rate-threshold: 50
+    minimum-number-of-calls: 10
+    sliding-window-size: 100
+    wait-duration-in-open-state: 60000
+    permitted-number-of-calls-in-half-open-state: 3
+    automatic-transition-from-open-to-half-open-enabled: true
+    record-exceptions: true
+    ignore-exceptions: false
+
+# Redis配置
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
+
+# 文件上传配置
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1GB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
